@@ -1,0 +1,164 @@
+import { Hono } from 'hono'
+import { cors } from 'hono/cors'
+
+export interface Env {
+  DB: D1Database
+}
+
+const app = new Hono<{ Bindings: Env }>()
+
+app.use('*', cors())
+
+// ── EXERCISES ────────────────────────────────────────────────────────────────
+
+app.get('/api/exercises', async (c) => {
+  const rows = await c.env.DB.prepare(
+    'SELECT * FROM exercises ORDER BY name ASC'
+  ).all()
+  return c.json(rows.results)
+})
+
+app.post('/api/exercises', async (c) => {
+  const { name, muscle_groups } = await c.req.json<{ name: string; muscle_groups: string[] }>()
+  if (!name || !muscle_groups?.length) return c.json({ error: 'Missing fields' }, 400)
+  const result = await c.env.DB.prepare(
+    'INSERT INTO exercises (name, muscle_groups) VALUES (?, ?)'
+  ).bind(name.trim(), JSON.stringify(muscle_groups)).run()
+  return c.json({ id: result.meta.last_row_id, name, muscle_groups })
+})
+
+app.put('/api/exercises/:id', async (c) => {
+  const id = c.req.param('id')
+  const { name, muscle_groups } = await c.req.json<{ name: string; muscle_groups: string[] }>()
+  await c.env.DB.prepare(
+    'UPDATE exercises SET name=?, muscle_groups=? WHERE id=?'
+  ).bind(name.trim(), JSON.stringify(muscle_groups), id).run()
+  return c.json({ ok: true })
+})
+
+app.delete('/api/exercises/:id', async (c) => {
+  const id = c.req.param('id')
+  await c.env.DB.prepare('DELETE FROM exercises WHERE id=?').bind(id).run()
+  return c.json({ ok: true })
+})
+
+// ── SESSIONS ─────────────────────────────────────────────────────────────────
+
+app.get('/api/sessions', async (c) => {
+  const rows = await c.env.DB.prepare(
+    'SELECT * FROM sessions ORDER BY date DESC LIMIT 100'
+  ).all()
+  return c.json(rows.results)
+})
+
+app.get('/api/sessions/:id', async (c) => {
+  const id = c.req.param('id')
+  const session = await c.env.DB.prepare('SELECT * FROM sessions WHERE id=?').bind(id).first()
+  if (!session) return c.json({ error: 'Not found' }, 404)
+
+  const trisets = await c.env.DB.prepare(
+    'SELECT * FROM trisets WHERE session_id=? ORDER BY position ASC'
+  ).bind(id).all()
+
+  const result = []
+  for (const ts of trisets.results as any[]) {
+    const exercises = await c.env.DB.prepare(`
+      SELECT te.*, e.name, e.muscle_groups
+      FROM triset_exercises te
+      JOIN exercises e ON e.id = te.exercise_id
+      WHERE te.triset_id=? ORDER BY te.position ASC
+    `).bind(ts.id).all()
+    result.push({ ...ts, exercises: exercises.results })
+  }
+
+  return c.json({ ...session, trisets: result })
+})
+
+app.post('/api/sessions', async (c) => {
+  const { date, notes, trisets } = await c.req.json<{
+    date: string
+    notes?: string
+    trisets: Array<{
+      exercises: Array<{ exercise_id: number; weight_kg?: number; reps?: number; sets?: number }>
+    }>
+  }>()
+
+  const session = await c.env.DB.prepare(
+    'INSERT INTO sessions (date, notes) VALUES (?, ?)'
+  ).bind(date, notes || null).run()
+  const sessionId = session.meta.last_row_id
+
+  for (let ti = 0; ti < trisets.length; ti++) {
+    const ts = trisets[ti]
+    const tsRow = await c.env.DB.prepare(
+      'INSERT INTO trisets (session_id, position) VALUES (?, ?)'
+    ).bind(sessionId, ti + 1).run()
+    const tsId = tsRow.meta.last_row_id
+
+    for (let ei = 0; ei < ts.exercises.length; ei++) {
+      const ex = ts.exercises[ei]
+      await c.env.DB.prepare(
+        'INSERT INTO triset_exercises (triset_id, exercise_id, position, weight_kg, reps, sets) VALUES (?,?,?,?,?,?)'
+      ).bind(tsId, ex.exercise_id, ei + 1, ex.weight_kg ?? null, ex.reps ?? null, ex.sets ?? 1).run()
+    }
+  }
+
+  return c.json({ id: sessionId })
+})
+
+app.delete('/api/sessions/:id', async (c) => {
+  const id = c.req.param('id')
+  await c.env.DB.prepare('DELETE FROM sessions WHERE id=?').bind(id).run()
+  return c.json({ ok: true })
+})
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+
+app.get('/api/stats/:period', async (c) => {
+  const period = c.req.param('period') // 'week' | 'month'
+  const since = period === 'week'
+    ? new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
+    : new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+
+  // sessions count
+  const sessionsCount = await c.env.DB.prepare(
+    "SELECT COUNT(*) as cnt FROM sessions WHERE date >= ?"
+  ).bind(since).first<{ cnt: number }>()
+
+  // muscle group breakdown
+  const rows = await c.env.DB.prepare(`
+    SELECT e.muscle_groups, COUNT(*) as cnt
+    FROM triset_exercises te
+    JOIN trisets ts ON ts.id = te.triset_id
+    JOIN sessions s ON s.id = ts.session_id
+    JOIN exercises e ON e.id = te.exercise_id
+    WHERE s.date >= ?
+    GROUP BY e.muscle_groups
+  `).bind(since).all()
+
+  const muscleMap: Record<string, number> = {}
+  for (const row of rows.results as any[]) {
+    const groups: string[] = JSON.parse(row.muscle_groups)
+    for (const g of groups) {
+      muscleMap[g] = (muscleMap[g] || 0) + row.cnt
+    }
+  }
+
+  // exercises per day
+  const perDay = await c.env.DB.prepare(`
+    SELECT s.date, COUNT(te.id) as exercises
+    FROM sessions s
+    JOIN trisets ts ON ts.session_id = s.id
+    JOIN triset_exercises te ON te.triset_id = ts.id
+    WHERE s.date >= ?
+    GROUP BY s.date ORDER BY s.date ASC
+  `).bind(since).all()
+
+  return c.json({
+    sessions: sessionsCount?.cnt ?? 0,
+    muscleGroups: muscleMap,
+    perDay: perDay.results
+  })
+})
+
+export default app
