@@ -11,6 +11,11 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 }
 
 export const api = {
+  // muscle groups
+  getMuscleGroups: ()                       => req<any[]>('GET', '/api/muscle-groups'),
+  createMuscleGroup: (b: any)               => req<any>('POST', '/api/muscle-groups', b),
+  updateMuscleGroup: (id: number, b: any)   => req<any>('PUT', `/api/muscle-groups/${id}`, b),
+  deleteMuscleGroup: (id: number)           => req<any>('DELETE', `/api/muscle-groups/${id}`),
   // exercises
   getExercises: ()                          => req<any[]>('GET', '/api/exercises'),
   createExercise: (b: any)                  => req<any>('POST', '/api/exercises', b),

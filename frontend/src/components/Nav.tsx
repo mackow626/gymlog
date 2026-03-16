@@ -3,10 +3,11 @@ import type { Page } from '../App'
 interface Props { page: Page; setPage: (p: Page) => void }
 
 const navItems = [
-  { name: 'dashboard',   label: 'Treningi',   icon: '⚡' },
-  { name: 'new-session', label: 'Nowy',        icon: '+' },
-  { name: 'exercises',   label: 'Ćwiczenia',  icon: '◈' },
-  { name: 'stats',       label: 'Statystyki', icon: '◎' },
+  { name: 'dashboard',     label: 'Treningi',    icon: '⚡' },
+  { name: 'new-session',   label: 'Nowy',        icon: '+' },
+  { name: 'exercises',     label: 'Ćwiczenia',   icon: '◈' },
+  { name: 'muscle-groups', label: 'Partie ciała',icon: '💪' },
+  { name: 'stats',         label: 'Statystyki',  icon: '◎' },
 ] as const
 
 export function Nav({ page, setPage }: Props) {

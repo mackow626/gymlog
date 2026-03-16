@@ -9,6 +9,40 @@ const app = new Hono<{ Bindings: Env }>()
 
 app.use('*', cors())
 
+// ── MUSCLE GROUPS ────────────────────────────────────────────────────────────
+
+app.get('/api/muscle-groups', async (c) => {
+  const rows = await c.env.DB.prepare(
+    'SELECT * FROM muscle_groups ORDER BY name ASC'
+  ).all()
+  return c.json(rows.results)
+})
+
+app.post('/api/muscle-groups', async (c) => {
+  const { name } = await c.req.json<{ name: string }>()
+  if (!name || !name.trim()) return c.json({ error: 'Missing name' }, 400)
+  const result = await c.env.DB.prepare(
+    'INSERT INTO muscle_groups (name) VALUES (?)'
+  ).bind(name.trim()).run()
+  return c.json({ id: result.meta.last_row_id, name: name.trim() })
+})
+
+app.put('/api/muscle-groups/:id', async (c) => {
+  const id = c.req.param('id')
+  const { name } = await c.req.json<{ name: string }>()
+  if (!name || !name.trim()) return c.json({ error: 'Missing name' }, 400)
+  await c.env.DB.prepare(
+    'UPDATE muscle_groups SET name=? WHERE id=?'
+  ).bind(name.trim(), id).run()
+  return c.json({ ok: true })
+})
+
+app.delete('/api/muscle-groups/:id', async (c) => {
+  const id = c.req.param('id')
+  await c.env.DB.prepare('DELETE FROM muscle_groups WHERE id=?').bind(id).run()
+  return c.json({ ok: true })
+})
+
 // ── EXERCISES ────────────────────────────────────────────────────────────────
 
 app.get('/api/exercises', async (c) => {

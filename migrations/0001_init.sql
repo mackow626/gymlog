@@ -1,3 +1,10 @@
+-- Muscle groups/body parts library
+CREATE TABLE IF NOT EXISTS muscle_groups (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 -- Exercises library
 CREATE TABLE IF NOT EXISTS exercises (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,6 +39,20 @@ CREATE TABLE IF NOT EXISTS triset_exercises (
   reps INTEGER,
   sets INTEGER DEFAULT 1
 );
+
+-- Seed default muscle groups
+INSERT OR IGNORE INTO muscle_groups (name) VALUES
+  ('klatka piersiowa'),
+  ('plecy'),
+  ('barki'),
+  ('biceps'),
+  ('triceps'),
+  ('czworogłowe'),
+  ('dwugłowe uda'),
+  ('pośladki'),
+  ('łydki'),
+  ('core'),
+  ('przedramiona');
 
 -- Seed default exercises
 INSERT OR IGNORE INTO exercises (name, muscle_groups) VALUES

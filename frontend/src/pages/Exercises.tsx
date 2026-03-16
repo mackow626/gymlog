@@ -1,19 +1,21 @@
 import { useEffect, useState } from 'react'
 import { api } from '../hooks/api'
 
-const ALL_MUSCLES = [
-  'klatka piersiowa','plecy','barki','biceps','triceps',
-  'czworogłowe','dwugłowe uda','pośladki','łydki','core','przedramiona'
-]
-
 export function Exercises() {
   const [exercises, setExercises] = useState<any[]>([])
+  const [allMuscles, setAllMuscles] = useState<string[]>([])
   const [editing, setEditing] = useState<any | null>(null)
   const [form, setForm] = useState({ name: '', muscle_groups: [] as string[] })
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
 
-  const load = () => api.getExercises().then(setExercises).finally(() => setLoading(false))
+  const load = () => {
+    Promise.all([
+      api.getExercises().then(setExercises),
+      api.getMuscleGroups().then(groups => setAllMuscles(groups.map(g => g.name)))
+    ]).finally(() => setLoading(false))
+  }
+
   useEffect(() => { load() }, [])
 
   const toggleMuscle = (m: string) => {
@@ -78,7 +80,7 @@ export function Exercises() {
             />
             <label className="field-label">Partie mięśni</label>
             <div className="muscle-grid">
-              {ALL_MUSCLES.map(m => (
+              {allMuscles.map(m => (
                 <button
                   key={m}
                   className={`muscle-tag ${form.muscle_groups.includes(m) ? 'active' : ''}`}

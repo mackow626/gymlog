@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { LockScreen } from './pages/LockScreen'
 import { Dashboard } from './pages/Dashboard'
 import { Exercises } from './pages/Exercises'
+import { MuscleGroups } from './pages/MuscleGroups'
 import { NewSession } from './pages/NewSession'
 import { SessionDetail } from './pages/SessionDetail'
 import { Stats } from './pages/Stats'
@@ -10,6 +11,7 @@ import { Nav } from './components/Nav'
 export type Page =
   | { name: 'dashboard' }
   | { name: 'exercises' }
+  | { name: 'muscle-groups' }
   | { name: 'new-session' }
   | { name: 'session'; id: number }
   | { name: 'stats' }
@@ -37,11 +39,12 @@ export default function App() {
     <div className="app">
       <Nav page={page} setPage={setPage} />
       <main className="main-content">
-        {page.name === 'dashboard'    && <Dashboard setPage={setPage} />}
-        {page.name === 'exercises'    && <Exercises />}
-        {page.name === 'new-session'  && <NewSession setPage={setPage} />}
-        {page.name === 'session'      && <SessionDetail id={page.id} setPage={setPage} />}
-        {page.name === 'stats'        && <Stats />}
+        {page.name === 'dashboard'      && <Dashboard setPage={setPage} />}
+        {page.name === 'exercises'      && <Exercises />}
+        {page.name === 'muscle-groups'  && <MuscleGroups />}
+        {page.name === 'new-session'    && <NewSession setPage={setPage} />}
+        {page.name === 'session'        && <SessionDetail id={page.id} setPage={setPage} />}
+        {page.name === 'stats'          && <Stats />}
       </main>
     </div>
   )
