@@ -165,7 +165,7 @@ export function NewSession({ setPage }: Props) {
       </div>
 
       <button className="btn-outline btn-add-triset" onClick={addTriset}>
-        + Dodaj tri-set
+        + Dodaj nowy tri-set
       </button>
     </div>
   )
