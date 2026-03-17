@@ -81,21 +81,19 @@ export function NewSession({ setPage, sessionId }: Props) {
       try {
         const lastStats = await api.getLastExerciseStats(exerciseId)
         if (lastStats && Array.isArray(lastStats.series) && lastStats.series.length > 0) {
-          const firstSeries = lastStats.series[0]
-
-          // Fill only first series with suggestion from last workout
+          // Fill all series with suggestions from last workout
           setTrisets(ts => ts.map((t, i) =>
             i !== ti ? t : {
               ...t,
               exercises: t.exercises.map((e, j) => j !== ei ? e : {
                 ...e,
-                series: [
-                  {
-                    weight_kg: firstSeries?.weight_kg !== undefined ? String(firstSeries.weight_kg) : '',
-                    reps: firstSeries?.reps !== undefined ? String(firstSeries.reps) : '',
-                  },
-                  ...e.series.slice(1)
-                ]
+                series: e.series.map((_, seriesIdx) => {
+                  const lastSeries = lastStats.series[seriesIdx]
+                  return {
+                    weight_kg: lastSeries?.weight_kg !== undefined ? String(lastSeries.weight_kg) : '',
+                    reps: lastSeries?.reps !== undefined ? String(lastSeries.reps) : '',
+                  }
+                })
               })
             }
           ))
@@ -106,10 +104,7 @@ export function NewSession({ setPage, sessionId }: Props) {
               ...t,
               exercises: t.exercises.map((e, j) => j !== ei ? e : {
                 ...e,
-                series: [
-                  emptySeries(),
-                  ...e.series.slice(1)
-                ]
+                series: e.series.map(() => emptySeries())
               })
             }
           ))
