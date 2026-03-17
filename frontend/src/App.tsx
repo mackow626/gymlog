@@ -13,6 +13,7 @@ export type Page =
   | { name: 'exercises' }
   | { name: 'muscle-groups' }
   | { name: 'new-session' }
+  | { name: 'edit-session'; id: number }
   | { name: 'session'; id: number }
   | { name: 'stats' }
 
@@ -43,6 +44,7 @@ export default function App() {
         {page.name === 'exercises'      && <Exercises />}
         {page.name === 'muscle-groups'  && <MuscleGroups />}
         {page.name === 'new-session'    && <NewSession setPage={setPage} />}
+        {page.name === 'edit-session'   && <NewSession setPage={setPage} sessionId={page.id} />}
         {page.name === 'session'        && <SessionDetail id={page.id} setPage={setPage} />}
         {page.name === 'stats'          && <Stats />}
       </main>

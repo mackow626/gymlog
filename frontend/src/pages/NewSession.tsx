@@ -4,22 +4,62 @@ import type { Page } from '../App'
 
 interface ExerciseEntry { exercise_id: number | null; weight_kg: string; reps: string; sets: string }
 interface TriSet { exercises: ExerciseEntry[] }
+interface SessionPayload {
+  date: string
+  notes?: string
+  trisets: Array<{
+    exercises: Array<{ exercise_id: number; weight_kg?: number; reps?: number; sets?: number }>
+  }>
+}
 
 const emptyEx = (): ExerciseEntry => ({ exercise_id: null, weight_kg: '', reps: '', sets: '3' })
 const emptyTriset = (): TriSet => ({ exercises: [emptyEx(), emptyEx(), emptyEx()] })
 
-interface Props { setPage: (p: Page) => void }
+interface Props {
+  setPage: (p: Page) => void
+  sessionId?: number
+}
 
-export function NewSession({ setPage }: Props) {
+interface ValidationState {
+  date?: string
+  general?: string
+}
+
+export function NewSession({ setPage, sessionId }: Props) {
   const [allExercises, setAllExercises] = useState<any[]>([])
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [notes, setNotes] = useState('')
   const [trisets, setTrisets] = useState<TriSet[]>([emptyTriset()])
+  const [loading, setLoading] = useState(Boolean(sessionId))
   const [saving, setSaving] = useState(false)
+  const [errors, setErrors] = useState<ValidationState>({})
 
-  useEffect(() => { api.getExercises().then(setAllExercises) }, [])
+  useEffect(() => {
+    let cancelled = false
+
+    Promise.all([
+      api.getExercises(),
+      sessionId ? api.getSession(sessionId) : Promise.resolve(null),
+    ]).then(([exercises, session]) => {
+      if (cancelled) return
+      setAllExercises(exercises)
+
+      if (session) {
+        setDate(session.date)
+        setNotes(session.notes ?? '')
+        setTrisets(mapSessionToTrisets(session))
+      }
+    }).finally(() => {
+      if (!cancelled) setLoading(false)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [sessionId])
 
   const updateEx = (ti: number, ei: number, field: keyof ExerciseEntry, value: any) => {
+    setErrors(current => ({ ...current, general: undefined }))
     setTrisets(ts => ts.map((t, i) =>
       i !== ti ? t : {
         ...t,
@@ -33,47 +73,81 @@ export function NewSession({ setPage }: Props) {
   const getExName = (id: number | null) =>
     id ? (allExercises.find(e => e.id === id)?.name ?? null) : null
 
+  const validate = () => {
+    const nextErrors: ValidationState = {}
+    const hasAtLeastOneExercise = trisets.some(ts =>
+      ts.exercises.some(ex => ex.exercise_id !== null)
+    )
+
+    if (!date) nextErrors.date = 'Wybierz datę treningu.'
+    if (!hasAtLeastOneExercise) nextErrors.general = 'Dodaj przynajmniej jedno ćwiczenie, żeby zapisać trening.'
+
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
+  }
+
+  const buildPayload = (): SessionPayload => ({
+    date,
+    notes: notes || undefined,
+    trisets: trisets.map(ts => ({
+      exercises: ts.exercises
+        .filter(e => e.exercise_id !== null)
+        .map(e => ({
+          exercise_id: e.exercise_id!,
+          weight_kg: e.weight_kg ? parseFloat(e.weight_kg) : undefined,
+          reps: e.reps ? parseInt(e.reps) : undefined,
+          sets: e.sets ? parseInt(e.sets) : 1,
+        }))
+    })).filter(ts => ts.exercises.length > 0)
+  })
+
   const save = async () => {
+    if (!validate()) return
+
     setSaving(true)
     try {
-      const payload = {
-        date,
-        notes: notes || undefined,
-        trisets: trisets.map(ts => ({
-          exercises: ts.exercises
-            .filter(e => e.exercise_id !== null)
-            .map(e => ({
-              exercise_id: e.exercise_id!,
-              weight_kg: e.weight_kg ? parseFloat(e.weight_kg) : undefined,
-              reps: e.reps ? parseInt(e.reps) : undefined,
-              sets: e.sets ? parseInt(e.sets) : 1,
-            }))
-        })).filter(ts => ts.exercises.length > 0)
+      const payload = buildPayload()
+      if (sessionId) {
+        await api.updateSession(sessionId, payload)
+        setPage({ name: 'session', id: sessionId })
+      } else {
+        const created = await api.createSession(payload)
+        setPage({ name: 'session', id: created.id })
       }
-      await api.createSession(payload)
-      setPage({ name: 'dashboard' })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Nie udało się zapisać treningu.'
+      setErrors(current => ({ ...current, general: message }))
     } finally {
       setSaving(false)
     }
   }
 
+  if (loading) return <div className="loading"><div className="spinner" /></div>
+
   return (
     <div className="page">
       <div className="page-header">
         <div>
-          <h2 className="page-title">Nowy trening</h2>
-          <p className="page-sub">Dodaj tri-sety</p>
+          <button
+            className="btn-ghost btn-back"
+            onClick={() => setPage(sessionId ? { name: 'session', id: sessionId } : { name: 'dashboard' })}
+          >
+            ← Powrót
+          </button>
+          <h2 className="page-title">{sessionId ? 'Edytuj trening' : 'Nowy trening'}</h2>
+          <p className="page-sub">{sessionId ? 'Zmień dane zapisanej sesji' : 'Dodaj tri-sety'}</p>
         </div>
         <button className="btn-primary" onClick={save} disabled={saving}>
-          {saving ? 'Zapisuję...' : 'Zapisz trening'}
+          {saving ? 'Zapisuję...' : sessionId ? 'Zapisz zmiany' : 'Zapisz trening'}
         </button>
       </div>
 
       <div className="session-meta">
         <div className="field-group">
           <label className="field-label">Data</label>
-          <input className="field-input" type="date" value={date}
+          <input className={`field-input ${errors.date ? 'field-input-error' : ''}`} type="date" value={date}
             onChange={e => setDate(e.target.value)} />
+          {errors.date && <p className="field-error">{errors.date}</p>}
         </div>
         <div className="field-group">
           <label className="field-label">Notatki (opcjonalnie)</label>
@@ -81,6 +155,8 @@ export function NewSession({ setPage }: Props) {
             onChange={e => setNotes(e.target.value)} />
         </div>
       </div>
+
+      {errors.general && <div className="form-error-banner">{errors.general}</div>}
 
       <div className="trisets-container">
         {trisets.map((ts, ti) => {
@@ -169,4 +245,22 @@ export function NewSession({ setPage }: Props) {
       </button>
     </div>
   )
+}
+
+function mapSessionToTrisets(session: any): TriSet[] {
+  const trisets = session.trisets?.map((ts: any) => ({
+    exercises: Array.from({ length: 3 }, (_, index) => {
+      const exercise = ts.exercises?.find((ex: any) => ex.position === index + 1)
+      if (!exercise) return emptyEx()
+
+      return {
+        exercise_id: exercise.exercise_id ?? null,
+        weight_kg: exercise.weight_kg?.toString() ?? '',
+        reps: exercise.reps?.toString() ?? '',
+        sets: exercise.sets?.toString() ?? '3',
+      }
+    })
+  }))
+
+  return trisets?.length ? trisets : [emptyTriset()]
 }

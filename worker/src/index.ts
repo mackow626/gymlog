@@ -9,6 +9,32 @@ const app = new Hono<{ Bindings: Env }>()
 
 app.use('*', cors())
 
+async function validateSessionExercises(
+  db: D1Database,
+  trisets: Array<{
+    exercises: Array<{ exercise_id: number; weight_kg?: number; reps?: number; sets?: number }>
+  }>
+) {
+  const exerciseIds = [...new Set(
+    trisets.flatMap(ts => ts.exercises.map(ex => ex.exercise_id)).filter(Boolean)
+  )]
+
+  if (!exerciseIds.length) {
+    return { ok: false, error: 'Dodaj przynajmniej jedno ćwiczenie.' as const }
+  }
+
+  const placeholders = exerciseIds.map(() => '?').join(',')
+  const existing = await db.prepare(
+    `SELECT id FROM exercises WHERE id IN (${placeholders})`
+  ).bind(...exerciseIds).all<{ id: number }>()
+
+  if ((existing.results?.length ?? 0) !== exerciseIds.length) {
+    return { ok: false, error: 'Wybrane ćwiczenie nie istnieje już w bibliotece.' as const }
+  }
+
+  return { ok: true as const }
+}
+
 // ── MUSCLE GROUPS ────────────────────────────────────────────────────────────
 
 app.get('/api/muscle-groups', async (c) => {
@@ -117,6 +143,13 @@ app.post('/api/sessions', async (c) => {
     }>
   }>()
 
+  if (!date || !trisets?.some(ts => ts.exercises?.length)) {
+    return c.json({ error: 'Session must include a date and at least one exercise' }, 400)
+  }
+
+  const validation = await validateSessionExercises(c.env.DB, trisets)
+  if (!validation.ok) return c.json({ error: validation.error }, 400)
+
   const session = await c.env.DB.prepare(
     'INSERT INTO sessions (date, notes) VALUES (?, ?)'
   ).bind(date, notes || null).run()
@@ -138,6 +171,55 @@ app.post('/api/sessions', async (c) => {
   }
 
   return c.json({ id: sessionId })
+})
+
+app.put('/api/sessions/:id', async (c) => {
+  const id = c.req.param('id')
+  const { date, notes, trisets } = await c.req.json<{
+    date: string
+    notes?: string
+    trisets: Array<{
+      exercises: Array<{ exercise_id: number; weight_kg?: number; reps?: number; sets?: number }>
+    }>
+  }>()
+
+  if (!date || !trisets?.some(ts => ts.exercises?.length)) {
+    return c.json({ error: 'Session must include a date and at least one exercise' }, 400)
+  }
+
+  const validation = await validateSessionExercises(c.env.DB, trisets)
+  if (!validation.ok) return c.json({ error: validation.error }, 400)
+
+  const existing = await c.env.DB.prepare(
+    'SELECT id FROM sessions WHERE id=?'
+  ).bind(id).first()
+
+  if (!existing) return c.json({ error: 'Not found' }, 404)
+
+  await c.env.DB.prepare(
+    'UPDATE sessions SET date=?, notes=? WHERE id=?'
+  ).bind(date, notes || null, id).run()
+
+  await c.env.DB.prepare(
+    'DELETE FROM trisets WHERE session_id=?'
+  ).bind(id).run()
+
+  for (let ti = 0; ti < trisets.length; ti++) {
+    const ts = trisets[ti]
+    const tsRow = await c.env.DB.prepare(
+      'INSERT INTO trisets (session_id, position) VALUES (?, ?)'
+    ).bind(id, ti + 1).run()
+    const tsId = tsRow.meta.last_row_id
+
+    for (let ei = 0; ei < ts.exercises.length; ei++) {
+      const ex = ts.exercises[ei]
+      await c.env.DB.prepare(
+        'INSERT INTO triset_exercises (triset_id, exercise_id, position, weight_kg, reps, sets) VALUES (?,?,?,?,?,?)'
+      ).bind(tsId, ex.exercise_id, ei + 1, ex.weight_kg ?? null, ex.reps ?? null, ex.sets ?? 1).run()
+    }
+  }
+
+  return c.json({ ok: true })
 })
 
 app.delete('/api/sessions/:id', async (c) => {

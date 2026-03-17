@@ -136,6 +136,13 @@ body {
   gap: 1rem;
 }
 
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .page-title {
   font-size: 1.75rem;
   font-weight: 800;
@@ -330,6 +337,28 @@ body {
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
+.field-input-error {
+  border-color: var(--danger);
+}
+
+.field-error {
+  margin-top: 0.45rem;
+  color: var(--danger);
+  font-size: 0.8rem;
+  font-family: var(--mono);
+}
+
+.form-error-banner {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(255,68,102,0.3);
+  background: rgba(255,68,102,0.08);
+  color: #ff8aa0;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-family: var(--mono);
+}
+
 .field-select option { background: var(--bg2); }
 
 .field-sm { width: 90px; min-width: 70px; }
@@ -359,6 +388,7 @@ body {
 }
 
 .session-card-left { display: flex; flex-direction: column; gap: 0.25rem; }
+.session-card-right { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
 .session-date { font-weight: 600; font-size: 0.95rem; }
 .session-notes { font-size: 0.8rem; color: var(--text2); font-family: var(--mono); }
 
@@ -835,9 +865,13 @@ body {
     margin-bottom: 1.25rem;
   }
 
+  .page-actions {
+    width: 100%;
+  }
+
   .page-title { font-size: 1.4rem; }
 
-  .btn-primary { justify-content: center; width: 100%; }
+  .btn-primary, .page-actions .btn-ghost { justify-content: center; width: 100%; }
 
   /* Session meta: single column */
   .session-meta {
@@ -873,6 +907,16 @@ body {
 
   /* Activity date shorter */
   .activity-date { width: 90px; font-size: 0.75rem; }
+
+  .session-card {
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .session-card-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
 
   /* Modal full screen on mobile */
   .modal-overlay { padding: 0; align-items: flex-end; }

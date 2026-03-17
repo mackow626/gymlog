@@ -25,6 +25,11 @@ export function SessionDetail({ id, setPage }: Props) {
           <h2 className="page-title">{formatDate(session.date)}</h2>
           {session.notes && <p className="page-sub">{session.notes}</p>}
         </div>
+        <div className="page-actions">
+          <button className="btn-ghost" onClick={() => setPage({ name: 'edit-session', id })}>
+            Edytuj trening
+          </button>
+        </div>
       </div>
 
       <div className="trisets-container">

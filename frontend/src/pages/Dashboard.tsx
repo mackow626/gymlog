@@ -50,6 +50,15 @@ export function Dashboard({ setPage }: Props) {
               {s.notes && <span className="session-notes">{s.notes}</span>}
             </div>
             <div className="session-card-right">
+              <button
+                className="btn-ghost"
+                onClick={e => {
+                  e.stopPropagation()
+                  setPage({ name: 'edit-session', id: s.id })
+                }}
+              >
+                Edytuj
+              </button>
               <button className="btn-ghost btn-danger" onClick={e => deleteSession(s.id, e)}>✕</button>
             </div>
           </div>
