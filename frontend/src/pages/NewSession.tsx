@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type WheelEvent } from 'react'
 import { api } from '../hooks/api'
 import type { Page } from '../App'
 
@@ -133,6 +133,10 @@ export function NewSession({ setPage, sessionId }: Props) {
         })
       }
     ))
+  }
+
+  const preventNumberScrollChange = (event: WheelEvent<HTMLInputElement>) => {
+    event.currentTarget.blur()
   }
 
   const addSeries = (ti: number, ei: number) => {
@@ -344,6 +348,7 @@ export function NewSession({ setPage, sessionId }: Props) {
                               <input className="field-input ex-input"
                                 type="number" inputMode="decimal" min="0" step="0.5" placeholder="0"
                                 value={series.weight_kg}
+                                onWheel={preventNumberScrollChange}
                                 onChange={e => updateSeries(ti, ei, si, 'weight_kg', e.target.value)} />
                             </div>
                             <div className="ex-input-cell">
@@ -351,6 +356,7 @@ export function NewSession({ setPage, sessionId }: Props) {
                               <input className="field-input ex-input"
                                 type="number" inputMode="numeric" min="1" placeholder="0"
                                 value={series.reps}
+                                onWheel={preventNumberScrollChange}
                                 onChange={e => updateSeries(ti, ei, si, 'reps', e.target.value)} />
                             </div>
                           </div>
