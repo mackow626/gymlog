@@ -1,18 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { api } from '../hooks/api'
 import type { Page } from '../App'
 
-interface ExerciseEntry { exercise_id: number | null; weight_kg: string; reps: string; sets: string }
+interface SeriesEntry { weight_kg: string; reps: string }
+interface ExerciseEntry { exercise_id: number | null; series: SeriesEntry[] }
 interface TriSet { exercises: ExerciseEntry[] }
 interface SessionPayload {
   date: string
   notes?: string
   trisets: Array<{
-    exercises: Array<{ exercise_id: number; weight_kg?: number; reps?: number; sets?: number }>
+    exercises: Array<{ exercise_id: number; series: Array<{ weight_kg?: number; reps?: number }> }>
   }>
 }
 
-const emptyEx = (): ExerciseEntry => ({ exercise_id: null, weight_kg: '', reps: '', sets: '3' })
+const emptySeries = (): SeriesEntry => ({ weight_kg: '', reps: '' })
+const emptyEx = (): ExerciseEntry => ({ exercise_id: null, series: [emptySeries(), emptySeries(), emptySeries()] })
 const emptyTriset = (): TriSet => ({ exercises: [emptyEx(), emptyEx(), emptyEx()] })
 
 interface Props {
@@ -68,10 +70,73 @@ export function NewSession({ setPage, sessionId }: Props) {
     ))
   }
 
+  const updateSeries = (
+    ti: number,
+    ei: number,
+    si: number,
+    field: keyof SeriesEntry,
+    value: string
+  ) => {
+    setErrors(current => ({ ...current, general: undefined }))
+    setTrisets(ts => ts.map((t, i) =>
+      i !== ti ? t : {
+        ...t,
+        exercises: t.exercises.map((e, j) => j !== ei ? e : {
+          ...e,
+          series: e.series.map((s, k) => k !== si ? s : { ...s, [field]: value })
+        })
+      }
+    ))
+  }
+
+  const addSeries = (ti: number, ei: number) => {
+    setTrisets(ts => ts.map((t, i) =>
+      i !== ti ? t : {
+        ...t,
+        exercises: t.exercises.map((e, j) => j !== ei ? e : { ...e, series: [...e.series, emptySeries()] })
+      }
+    ))
+  }
+
+  const removeSeries = (ti: number, ei: number, si: number) => {
+    setTrisets(ts => ts.map((t, i) =>
+      i !== ti ? t : {
+        ...t,
+        exercises: t.exercises.map((e, j) => {
+          if (j !== ei) return e
+          if (e.series.length <= 1) return e
+          return { ...e, series: e.series.filter((_, k) => k !== si) }
+        })
+      }
+    ))
+  }
+
   const addTriset = () => setTrisets(ts => [...ts, emptyTriset()])
   const removeTriset = (i: number) => setTrisets(ts => ts.filter((_, j) => j !== i))
   const getExName = (id: number | null) =>
     id ? (allExercises.find(e => e.id === id)?.name ?? null) : null
+
+  const groupedExercises = useMemo(() => {
+    const groups = new Map<string, any[]>()
+
+    for (const exercise of allExercises) {
+      const primaryGroup = getPrimaryMuscleGroup(exercise)
+      const list = groups.get(primaryGroup) ?? []
+      list.push(exercise)
+      groups.set(primaryGroup, list)
+    }
+
+    return Array.from(groups.entries())
+      .map(([group, exercises]) => ({
+        group,
+        exercises: exercises.sort((a, b) => a.name.localeCompare(b.name, 'pl')),
+      }))
+      .sort((a, b) => {
+        if (a.group === 'inne') return 1
+        if (b.group === 'inne') return -1
+        return a.group.localeCompare(b.group, 'pl')
+      })
+  }, [allExercises])
 
   const validate = () => {
     const nextErrors: ValidationState = {}
@@ -94,9 +159,15 @@ export function NewSession({ setPage, sessionId }: Props) {
         .filter(e => e.exercise_id !== null)
         .map(e => ({
           exercise_id: e.exercise_id!,
-          weight_kg: e.weight_kg ? parseFloat(e.weight_kg) : undefined,
-          reps: e.reps ? parseInt(e.reps) : undefined,
-          sets: e.sets ? parseInt(e.sets) : 1,
+          series: (() => {
+            const mapped = e.series
+              .map(s => ({
+                weight_kg: s.weight_kg ? parseFloat(s.weight_kg) : undefined,
+                reps: s.reps ? parseInt(s.reps) : undefined,
+              }))
+              .filter(s => s.weight_kg !== undefined || s.reps !== undefined)
+            return mapped.length ? mapped : [{}]
+          })(),
         }))
     })).filter(ts => ts.exercises.length > 0)
   })
@@ -181,9 +252,14 @@ export function NewSession({ setPage, sessionId }: Props) {
                       <span className="preview-num">{ei + 1}</span>
                       <span className="preview-name">{name}</span>
                       <div className="preview-chips">
-                        {ex.sets      && <span className="preview-chip"><span className="chip-val">{ex.sets}</span><span className="chip-unit"> ser</span></span>}
-                        {ex.reps      && <span className="preview-chip"><span className="chip-val">{ex.reps}</span><span className="chip-unit"> pow</span></span>}
-                        {ex.weight_kg && <span className="preview-chip accent"><span className="chip-val">{ex.weight_kg}</span><span className="chip-unit"> kg</span></span>}
+                        {ex.series
+                          .filter(s => s.weight_kg || s.reps)
+                          .map((s, si) => (
+                            <span key={si} className="preview-chip accent">
+                              <span className="chip-val">S{si + 1}</span>
+                              <span className="chip-unit"> {s.weight_kg || '0'}kg x {s.reps || '0'}</span>
+                            </span>
+                          ))}
                       </div>
                     </div>
                   ))}
@@ -203,34 +279,49 @@ export function NewSession({ setPage, sessionId }: Props) {
                         onChange={e => updateEx(ti, ei, 'exercise_id', e.target.value ? parseInt(e.target.value) : null)}
                       >
                         <option value="">— wybierz ćwiczenie —</option>
-                        {allExercises.map(e => (
-                          <option key={e.id} value={e.id}>{e.name}</option>
+                        {groupedExercises.map(section => (
+                          <optgroup key={section.group} label={section.group}>
+                            {section.exercises.map(e => (
+                              <option key={e.id} value={e.id}>{e.name}</option>
+                            ))}
+                          </optgroup>
                         ))}
                       </select>
                     </div>
-                    {/* 3 inputs row */}
-                    <div className="ex-inputs-row">
-                      <div className="ex-input-cell">
-                        <label className="ex-input-label">KG</label>
-                        <input className="field-input ex-input"
-                          type="number" inputMode="decimal" min="0" step="0.5" placeholder="0"
-                          value={ex.weight_kg}
-                          onChange={e => updateEx(ti, ei, 'weight_kg', e.target.value)} />
-                      </div>
-                      <div className="ex-input-cell">
-                        <label className="ex-input-label">POWT.</label>
-                        <input className="field-input ex-input"
-                          type="number" inputMode="numeric" min="1" placeholder="0"
-                          value={ex.reps}
-                          onChange={e => updateEx(ti, ei, 'reps', e.target.value)} />
-                      </div>
-                      <div className="ex-input-cell">
-                        <label className="ex-input-label">SERIE</label>
-                        <input className="field-input ex-input"
-                          type="number" inputMode="numeric" min="1" placeholder="0"
-                          value={ex.sets}
-                          onChange={e => updateEx(ti, ei, 'sets', e.target.value)} />
-                      </div>
+                    <div className="series-list">
+                      {ex.series.map((series, si) => (
+                        <div key={si} className="series-row">
+                          <span className="series-badge">S{si + 1}</span>
+                          <div className="series-inputs">
+                            <div className="ex-input-cell">
+                              <label className="ex-input-label">KG</label>
+                              <input className="field-input ex-input"
+                                type="number" inputMode="decimal" min="0" step="0.5" placeholder="0"
+                                value={series.weight_kg}
+                                onChange={e => updateSeries(ti, ei, si, 'weight_kg', e.target.value)} />
+                            </div>
+                            <div className="ex-input-cell">
+                              <label className="ex-input-label">POWT.</label>
+                              <input className="field-input ex-input"
+                                type="number" inputMode="numeric" min="1" placeholder="0"
+                                value={series.reps}
+                                onChange={e => updateSeries(ti, ei, si, 'reps', e.target.value)} />
+                            </div>
+                          </div>
+                          {ex.series.length > 1 && (
+                            <button
+                              className="btn-ghost btn-sm"
+                              type="button"
+                              onClick={() => removeSeries(ti, ei, si)}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button className="btn-ghost btn-sm" type="button" onClick={() => addSeries(ti, ei)}>
+                        + Dodaj serię
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -255,12 +346,67 @@ function mapSessionToTrisets(session: any): TriSet[] {
 
       return {
         exercise_id: exercise.exercise_id ?? null,
-        weight_kg: exercise.weight_kg?.toString() ?? '',
-        reps: exercise.reps?.toString() ?? '',
-        sets: exercise.sets?.toString() ?? '3',
+        series: parseSeriesFromApi(exercise),
       }
     })
   }))
 
   return trisets?.length ? trisets : [emptyTriset()]
+}
+
+function getPrimaryMuscleGroup(exercise: any): string {
+  const fallback = 'inne'
+  try {
+    const groups = JSON.parse(exercise.muscle_groups ?? '[]')
+    if (Array.isArray(groups) && groups.length > 0 && typeof groups[0] === 'string') {
+      return groups[0]
+    }
+    return fallback
+  } catch {
+    return fallback
+  }
+}
+
+function parseSeriesFromApi(exercise: any): SeriesEntry[] {
+  const parsedWeights = parseNumberArray(exercise.weight_kg)
+  const parsedReps = parseNumberArray(exercise.reps)
+  const fromArrays = Math.max(parsedWeights.length, parsedReps.length)
+  const fromCount = Number.isFinite(Number(exercise.sets)) ? Number(exercise.sets) : 0
+  const count = Math.max(fromArrays, fromCount, 1)
+
+  return Array.from({ length: count }, (_, index) => ({
+    weight_kg: parsedWeights[index] !== undefined && parsedWeights[index] !== null
+      ? String(parsedWeights[index])
+      : '',
+    reps: parsedReps[index] !== undefined && parsedReps[index] !== null
+      ? String(parsedReps[index])
+      : '',
+  }))
+}
+
+function parseNumberArray(value: unknown): Array<number | null> {
+  if (Array.isArray(value)) {
+    return value.map(v => toNullableNumber(v))
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return []
+
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (Array.isArray(parsed)) return parsed.map(v => toNullableNumber(v))
+    } catch {
+      const asNumber = Number(trimmed)
+      return Number.isFinite(asNumber) ? [asNumber] : []
+    }
+  }
+
+  if (typeof value === 'number') return [value]
+  return []
+}
+
+function toNullableNumber(value: unknown): number | null {
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
 }

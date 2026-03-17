@@ -41,6 +41,7 @@ export function SessionDetail({ id, setPage }: Props) {
             <div className="triset-exercises">
               {ts.exercises?.map((ex: any) => {
                 const muscles: string[] = JSON.parse(ex.muscle_groups ?? '[]')
+                const series = parseSeriesFromApi(ex)
                 return (
                   <div key={ex.id} className="detail-exercise-row">
                     <span className="ex-num">{ex.position}</span>
@@ -51,9 +52,11 @@ export function SessionDetail({ id, setPage }: Props) {
                       </div>
                     </div>
                     <div className="detail-ex-stats">
-                      {ex.sets && <span className="stat-chip">{ex.sets} serie</span>}
-                      {ex.reps && <span className="stat-chip">{ex.reps} powt.</span>}
-                      {ex.weight_kg && <span className="stat-chip accent">{ex.weight_kg} kg</span>}
+                      {series.map((s, index) => (
+                        <span key={index} className="stat-chip accent">
+                          S{index + 1}: {s.weight_kg ?? '-'} kg x {s.reps ?? '-'}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 )
@@ -70,4 +73,38 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString('pl-PL', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   })
+}
+
+function parseSeriesFromApi(exercise: any): Array<{ weight_kg: number | null; reps: number | null }> {
+  const weights = parseNumberArray(exercise.weight_kg)
+  const reps = parseNumberArray(exercise.reps)
+  const count = Math.max(weights.length, reps.length, Number(exercise.sets) || 1)
+
+  return Array.from({ length: count }, (_, index) => ({
+    weight_kg: weights[index] ?? null,
+    reps: reps[index] ?? null,
+  }))
+}
+
+function parseNumberArray(value: unknown): Array<number | null> {
+  if (Array.isArray(value)) return value.map(v => toNullableNumber(v))
+  if (typeof value === 'number') return [value]
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return []
+
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (Array.isArray(parsed)) return parsed.map(v => toNullableNumber(v))
+    } catch {
+      const num = Number(trimmed)
+      return Number.isFinite(num) ? [num] : []
+    }
+  }
+  return []
+}
+
+function toNullableNumber(value: unknown): number | null {
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
 }

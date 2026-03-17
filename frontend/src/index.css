@@ -1094,6 +1094,40 @@ body {
   padding-left: 2rem; /* align under select, past the num badge */
 }
 
+.series-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-left: 2rem;
+}
+
+.series-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.series-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--border2);
+  color: var(--accent);
+  background: rgba(0,229,255,0.06);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.series-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  flex: 1;
+}
+
 .ex-input-cell {
   display: flex;
   flex-direction: column;
@@ -1192,5 +1226,13 @@ body {
 
   .ex-inputs-row {
     padding-left: 1.75rem;
+  }
+
+  .series-list {
+    padding-left: 1.75rem;
+  }
+
+  .series-row {
+    align-items: center;
   }
 }

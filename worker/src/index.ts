@@ -12,7 +12,7 @@ app.use('*', cors())
 async function validateSessionExercises(
   db: D1Database,
   trisets: Array<{
-    exercises: Array<{ exercise_id: number; weight_kg?: number; reps?: number; sets?: number }>
+    exercises: Array<{ exercise_id: number }>
   }>
 ) {
   const exerciseIds = [...new Set(
@@ -33,6 +33,39 @@ async function validateSessionExercises(
   }
 
   return { ok: true as const }
+}
+
+function toNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
+function normalizeSeriesForStorage(ex: {
+  weight_kg?: number
+  reps?: number
+  sets?: number
+  series?: Array<{ weight_kg?: number; reps?: number }>
+}) {
+  if (Array.isArray(ex.series) && ex.series.length > 0) {
+    const weights = ex.series.map(s => toNullableNumber(s.weight_kg))
+    const reps = ex.series.map(s => toNullableNumber(s.reps))
+    return {
+      weights,
+      reps,
+      count: ex.series.length,
+    }
+  }
+
+  const count = Number.isFinite(Number(ex.sets)) && Number(ex.sets) > 0 ? Number(ex.sets) : 1
+  const legacyWeight = toNullableNumber(ex.weight_kg)
+  const legacyReps = toNullableNumber(ex.reps)
+
+  return {
+    weights: Array.from({ length: count }, () => legacyWeight),
+    reps: Array.from({ length: count }, () => legacyReps),
+    count,
+  }
 }
 
 // ── MUSCLE GROUPS ────────────────────────────────────────────────────────────
@@ -139,7 +172,13 @@ app.post('/api/sessions', async (c) => {
     date: string
     notes?: string
     trisets: Array<{
-      exercises: Array<{ exercise_id: number; weight_kg?: number; reps?: number; sets?: number }>
+      exercises: Array<{
+        exercise_id: number
+        weight_kg?: number
+        reps?: number
+        sets?: number
+        series?: Array<{ weight_kg?: number; reps?: number }>
+      }>
     }>
   }>()
 
@@ -164,9 +203,17 @@ app.post('/api/sessions', async (c) => {
 
     for (let ei = 0; ei < ts.exercises.length; ei++) {
       const ex = ts.exercises[ei]
+      const normalized = normalizeSeriesForStorage(ex)
       await c.env.DB.prepare(
         'INSERT INTO triset_exercises (triset_id, exercise_id, position, weight_kg, reps, sets) VALUES (?,?,?,?,?,?)'
-      ).bind(tsId, ex.exercise_id, ei + 1, ex.weight_kg ?? null, ex.reps ?? null, ex.sets ?? 1).run()
+      ).bind(
+        tsId,
+        ex.exercise_id,
+        ei + 1,
+        JSON.stringify(normalized.weights),
+        JSON.stringify(normalized.reps),
+        normalized.count
+      ).run()
     }
   }
 
@@ -179,7 +226,13 @@ app.put('/api/sessions/:id', async (c) => {
     date: string
     notes?: string
     trisets: Array<{
-      exercises: Array<{ exercise_id: number; weight_kg?: number; reps?: number; sets?: number }>
+      exercises: Array<{
+        exercise_id: number
+        weight_kg?: number
+        reps?: number
+        sets?: number
+        series?: Array<{ weight_kg?: number; reps?: number }>
+      }>
     }>
   }>()
 
@@ -213,9 +266,17 @@ app.put('/api/sessions/:id', async (c) => {
 
     for (let ei = 0; ei < ts.exercises.length; ei++) {
       const ex = ts.exercises[ei]
+      const normalized = normalizeSeriesForStorage(ex)
       await c.env.DB.prepare(
         'INSERT INTO triset_exercises (triset_id, exercise_id, position, weight_kg, reps, sets) VALUES (?,?,?,?,?,?)'
-      ).bind(tsId, ex.exercise_id, ei + 1, ex.weight_kg ?? null, ex.reps ?? null, ex.sets ?? 1).run()
+      ).bind(
+        tsId,
+        ex.exercise_id,
+        ei + 1,
+        JSON.stringify(normalized.weights),
+        JSON.stringify(normalized.reps),
+        normalized.count
+      ).run()
     }
   }
 
