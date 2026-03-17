@@ -51,7 +51,7 @@ export function Dashboard({ setPage }: Props) {
             </div>
             <div className="session-card-right">
               <button
-                className="btn-ghost"
+                className="btn-ghost btn-edit"
                 onClick={e => {
                   e.stopPropagation()
                   setPage({ name: 'edit-session', id: s.id })
