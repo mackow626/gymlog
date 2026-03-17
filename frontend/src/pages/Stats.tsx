@@ -48,7 +48,7 @@ export function Stats() {
             </div>
             <div className="stat-card">
               <span className="stat-big">
-                {Object.values(stats.muscleGroups as Record<string, number>).reduce((a, b) => a + b, 0)}
+                {stats.totalSeries ?? 0}
               </span>
               <span className="stat-label">Łącznie serii</span>
             </div>

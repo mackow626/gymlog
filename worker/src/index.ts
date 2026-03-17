@@ -189,35 +189,42 @@ app.post('/api/sessions', async (c) => {
   const validation = await validateSessionExercises(c.env.DB, trisets)
   if (!validation.ok) return c.json({ error: validation.error }, 400)
 
-  const session = await c.env.DB.prepare(
-    'INSERT INTO sessions (date, notes) VALUES (?, ?)'
-  ).bind(date, notes || null).run()
-  const sessionId = session.meta.last_row_id
+  await c.env.DB.exec('BEGIN TRANSACTION')
+  try {
+    const session = await c.env.DB.prepare(
+      'INSERT INTO sessions (date, notes) VALUES (?, ?)'
+    ).bind(date, notes || null).run()
+    const sessionId = session.meta.last_row_id
 
-  for (let ti = 0; ti < trisets.length; ti++) {
-    const ts = trisets[ti]
-    const tsRow = await c.env.DB.prepare(
-      'INSERT INTO trisets (session_id, position) VALUES (?, ?)'
-    ).bind(sessionId, ti + 1).run()
-    const tsId = tsRow.meta.last_row_id
+    for (let ti = 0; ti < trisets.length; ti++) {
+      const ts = trisets[ti]
+      const tsRow = await c.env.DB.prepare(
+        'INSERT INTO trisets (session_id, position) VALUES (?, ?)'
+      ).bind(sessionId, ti + 1).run()
+      const tsId = tsRow.meta.last_row_id
 
-    for (let ei = 0; ei < ts.exercises.length; ei++) {
-      const ex = ts.exercises[ei]
-      const normalized = normalizeSeriesForStorage(ex)
-      await c.env.DB.prepare(
-        'INSERT INTO triset_exercises (triset_id, exercise_id, position, weight_kg, reps, sets) VALUES (?,?,?,?,?,?)'
-      ).bind(
-        tsId,
-        ex.exercise_id,
-        ei + 1,
-        JSON.stringify(normalized.weights),
-        JSON.stringify(normalized.reps),
-        normalized.count
-      ).run()
+      for (let ei = 0; ei < ts.exercises.length; ei++) {
+        const ex = ts.exercises[ei]
+        const normalized = normalizeSeriesForStorage(ex)
+        await c.env.DB.prepare(
+          'INSERT INTO triset_exercises (triset_id, exercise_id, position, weight_kg, reps, sets) VALUES (?,?,?,?,?,?)'
+        ).bind(
+          tsId,
+          ex.exercise_id,
+          ei + 1,
+          JSON.stringify(normalized.weights),
+          JSON.stringify(normalized.reps),
+          normalized.count
+        ).run()
+      }
     }
-  }
 
-  return c.json({ id: sessionId })
+    await c.env.DB.exec('COMMIT')
+    return c.json({ id: sessionId })
+  } catch (error) {
+    await c.env.DB.exec('ROLLBACK')
+    throw error
+  }
 })
 
 app.put('/api/sessions/:id', async (c) => {
@@ -249,38 +256,45 @@ app.put('/api/sessions/:id', async (c) => {
 
   if (!existing) return c.json({ error: 'Not found' }, 404)
 
-  await c.env.DB.prepare(
-    'UPDATE sessions SET date=?, notes=? WHERE id=?'
-  ).bind(date, notes || null, id).run()
+  await c.env.DB.exec('BEGIN TRANSACTION')
+  try {
+    await c.env.DB.prepare(
+      'UPDATE sessions SET date=?, notes=? WHERE id=?'
+    ).bind(date, notes || null, id).run()
 
-  await c.env.DB.prepare(
-    'DELETE FROM trisets WHERE session_id=?'
-  ).bind(id).run()
+    await c.env.DB.prepare(
+      'DELETE FROM trisets WHERE session_id=?'
+    ).bind(id).run()
 
-  for (let ti = 0; ti < trisets.length; ti++) {
-    const ts = trisets[ti]
-    const tsRow = await c.env.DB.prepare(
-      'INSERT INTO trisets (session_id, position) VALUES (?, ?)'
-    ).bind(id, ti + 1).run()
-    const tsId = tsRow.meta.last_row_id
+    for (let ti = 0; ti < trisets.length; ti++) {
+      const ts = trisets[ti]
+      const tsRow = await c.env.DB.prepare(
+        'INSERT INTO trisets (session_id, position) VALUES (?, ?)'
+      ).bind(id, ti + 1).run()
+      const tsId = tsRow.meta.last_row_id
 
-    for (let ei = 0; ei < ts.exercises.length; ei++) {
-      const ex = ts.exercises[ei]
-      const normalized = normalizeSeriesForStorage(ex)
-      await c.env.DB.prepare(
-        'INSERT INTO triset_exercises (triset_id, exercise_id, position, weight_kg, reps, sets) VALUES (?,?,?,?,?,?)'
-      ).bind(
-        tsId,
-        ex.exercise_id,
-        ei + 1,
-        JSON.stringify(normalized.weights),
-        JSON.stringify(normalized.reps),
-        normalized.count
-      ).run()
+      for (let ei = 0; ei < ts.exercises.length; ei++) {
+        const ex = ts.exercises[ei]
+        const normalized = normalizeSeriesForStorage(ex)
+        await c.env.DB.prepare(
+          'INSERT INTO triset_exercises (triset_id, exercise_id, position, weight_kg, reps, sets) VALUES (?,?,?,?,?,?)'
+        ).bind(
+          tsId,
+          ex.exercise_id,
+          ei + 1,
+          JSON.stringify(normalized.weights),
+          JSON.stringify(normalized.reps),
+          normalized.count
+        ).run()
+      }
     }
-  }
 
-  return c.json({ ok: true })
+    await c.env.DB.exec('COMMIT')
+    return c.json({ ok: true })
+  } catch (error) {
+    await c.env.DB.exec('ROLLBACK')
+    throw error
+  }
 })
 
 app.delete('/api/sessions/:id', async (c) => {
@@ -304,7 +318,7 @@ app.get('/api/stats/:period', async (c) => {
 
   // muscle group breakdown
   const rows = await c.env.DB.prepare(`
-    SELECT e.muscle_groups, COUNT(*) as cnt
+    SELECT e.muscle_groups, SUM(COALESCE(te.sets, 1)) as cnt
     FROM triset_exercises te
     JOIN trisets ts ON ts.id = te.triset_id
     JOIN sessions s ON s.id = ts.session_id
@@ -314,10 +328,13 @@ app.get('/api/stats/:period', async (c) => {
   `).bind(since).all()
 
   const muscleMap: Record<string, number> = {}
+  let totalSeries = 0
   for (const row of rows.results as any[]) {
     const groups: string[] = JSON.parse(row.muscle_groups)
+    const count = Number(row.cnt) || 0
+    totalSeries += count
     for (const g of groups) {
-      muscleMap[g] = (muscleMap[g] || 0) + row.cnt
+      muscleMap[g] = (muscleMap[g] || 0) + count
     }
   }
 
@@ -333,6 +350,7 @@ app.get('/api/stats/:period', async (c) => {
 
   return c.json({
     sessions: sessionsCount?.cnt ?? 0,
+    totalSeries,
     muscleGroups: muscleMap,
     perDay: perDay.results
   })
