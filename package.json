@@ -5,6 +5,9 @@
   "scripts": {
     "dev:worker":   "cd worker && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
-    "install:all":  "cd worker && npm install && cd ../frontend && npm install"
+    "install:all":  "cd worker && npm install && cd ../frontend && npm install",
+    "test:worker": "cd worker && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "test": "npm run test:worker && npm run test:frontend"
   }
 }

@@ -135,6 +135,50 @@ app.delete('/api/exercises/:id', async (c) => {
   return c.json({ ok: true })
 })
 
+app.get('/api/exercises/:id/last-stats', async (c) => {
+  const exerciseId = c.req.param('id')
+
+  const lastExercise = await c.env.DB.prepare(`
+    SELECT te.weight_kg, te.reps, te.sets
+    FROM triset_exercises te
+    JOIN trisets ts ON ts.id = te.triset_id
+    JOIN sessions s ON s.id = ts.session_id
+    WHERE te.exercise_id = ?
+    ORDER BY s.date DESC, s.id DESC
+    LIMIT 1
+  `).bind(exerciseId).first<{ weight_kg: string; reps: string; sets: number }>()
+
+  if (!lastExercise) {
+    return c.json(null)
+  }
+
+  try {
+    const weights = JSON.parse(lastExercise.weight_kg ?? '[]')
+    const reps = JSON.parse(lastExercise.reps ?? '[]')
+    const count = Number.isFinite(Number(lastExercise.sets)) ? Number(lastExercise.sets) : Math.max(
+      Array.isArray(weights) ? weights.length : 0,
+      Array.isArray(reps) ? reps.length : 0
+    )
+
+    // Build series array from parsed weights and reps
+    const series = Array.from({ length: count }, (_, i) => ({
+      weight_kg: Array.isArray(weights) && i < weights.length ? weights[i] : undefined,
+      reps: Array.isArray(reps) && i < reps.length ? reps[i] : undefined,
+    }))
+
+    // Filter out series with no data
+    const filteredSeries = series.filter(s => s.weight_kg !== undefined || s.reps !== undefined)
+
+    if (filteredSeries.length === 0) {
+      return c.json(null)
+    }
+
+    return c.json({ series: filteredSeries })
+  } catch {
+    return c.json(null)
+  }
+})
+
 // ── SESSIONS ─────────────────────────────────────────────────────────────────
 
 app.get('/api/sessions', async (c) => {
@@ -189,7 +233,7 @@ app.post('/api/sessions', async (c) => {
   const validation = await validateSessionExercises(c.env.DB, trisets)
   if (!validation.ok) return c.json({ error: validation.error }, 400)
 
-  await c.env.DB.exec('BEGIN TRANSACTION')
+  // TRANSACTION REMOVED FOR DEV
   try {
     const session = await c.env.DB.prepare(
       'INSERT INTO sessions (date, notes) VALUES (?, ?)'
@@ -219,16 +263,17 @@ app.post('/api/sessions', async (c) => {
       }
     }
 
-    await c.env.DB.exec('COMMIT')
+    // COMMIT
     return c.json({ id: sessionId })
   } catch (error) {
-    await c.env.DB.exec('ROLLBACK')
-    throw error
+    // ROLLBACK
+    return c.json({ error: error instanceof Error ? error.message : "Failed to create session" }, 500)
   }
 })
 
 app.put('/api/sessions/:id', async (c) => {
-  const id = c.req.param('id')
+  const idParam = c.req.param('id')
+  const id = Number(idParam)
   const { date, notes, trisets } = await c.req.json<{
     date: string
     notes?: string
@@ -243,6 +288,10 @@ app.put('/api/sessions/:id', async (c) => {
     }>
   }>()
 
+  if (!Number.isFinite(id)) {
+    return c.json({ error: 'Invalid session ID' }, 400)
+  }
+
   if (!date || !trisets?.some(ts => ts.exercises?.length)) {
     return c.json({ error: 'Session must include a date and at least one exercise' }, 400)
   }
@@ -256,7 +305,7 @@ app.put('/api/sessions/:id', async (c) => {
 
   if (!existing) return c.json({ error: 'Not found' }, 404)
 
-  await c.env.DB.exec('BEGIN TRANSACTION')
+  // TRANSACTION REMOVED FOR DEV
   try {
     await c.env.DB.prepare(
       'UPDATE sessions SET date=?, notes=? WHERE id=?'
@@ -289,11 +338,12 @@ app.put('/api/sessions/:id', async (c) => {
       }
     }
 
-    await c.env.DB.exec('COMMIT')
+    // COMMIT
     return c.json({ ok: true })
   } catch (error) {
-    await c.env.DB.exec('ROLLBACK')
-    throw error
+    console.error('PUT /api/sessions/:id error:', error instanceof Error ? error.message : error)
+    // ROLLBACK
+    return c.json({ error: error instanceof Error ? error.message : 'Unknown error' }, 500)
   }
 })
 

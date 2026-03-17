@@ -28,6 +28,7 @@ export const api = {
   createExercise: (b: any)                  => req<any>('POST', '/api/exercises', b),
   updateExercise: (id: number, b: any)      => req<any>('PUT', `/api/exercises/${id}`, b),
   deleteExercise: (id: number)              => req<any>('DELETE', `/api/exercises/${id}`),
+  getLastExerciseStats: (id: number)        => req<{series: Array<{weight_kg?: number; reps?: number}>} | null>('GET', `/api/exercises/${id}/last-stats`),
   // sessions
   getSessions: ()                           => req<any[]>('GET', '/api/sessions'),
   getSession: (id: number)                  => req<any>('GET', `/api/sessions/${id}`),

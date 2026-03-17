@@ -70,6 +70,57 @@ export function NewSession({ setPage, sessionId }: Props) {
     ))
   }
 
+  const handleExerciseChange = async (ti: number, ei: number, exerciseIdStr: string) => {
+    const exerciseId = exerciseIdStr ? parseInt(exerciseIdStr) : null
+    
+    // Update exercise_id first
+    updateEx(ti, ei, 'exercise_id', exerciseId)
+    
+    // If exercise selected, try to load last stats
+    if (exerciseId) {
+      try {
+        const lastStats = await api.getLastExerciseStats(exerciseId)
+        if (lastStats && Array.isArray(lastStats.series) && lastStats.series.length > 0) {
+          const firstSeries = lastStats.series[0]
+
+          // Fill only first series with suggestion from last workout
+          setTrisets(ts => ts.map((t, i) =>
+            i !== ti ? t : {
+              ...t,
+              exercises: t.exercises.map((e, j) => j !== ei ? e : {
+                ...e,
+                series: [
+                  {
+                    weight_kg: firstSeries?.weight_kg !== undefined ? String(firstSeries.weight_kg) : '',
+                    reps: firstSeries?.reps !== undefined ? String(firstSeries.reps) : '',
+                  },
+                  ...e.series.slice(1)
+                ]
+              })
+            }
+          ))
+        } else {
+          // No history for exercise: clear suggestion
+          setTrisets(ts => ts.map((t, i) =>
+            i !== ti ? t : {
+              ...t,
+              exercises: t.exercises.map((e, j) => j !== ei ? e : {
+                ...e,
+                series: [
+                  emptySeries(),
+                  ...e.series.slice(1)
+                ]
+              })
+            }
+          ))
+        }
+      } catch (error) {
+        // Silently fail - user can enter values manually
+        console.debug('Could not fetch last exercise stats', error)
+      }
+    }
+  }
+
   const updateSeries = (
     ti: number,
     ei: number,
@@ -276,7 +327,7 @@ export function NewSession({ setPage, sessionId }: Props) {
                       <select
                         className="field-select"
                         value={ex.exercise_id ?? ''}
-                        onChange={e => updateEx(ti, ei, 'exercise_id', e.target.value ? parseInt(e.target.value) : null)}
+                        onChange={e => handleExerciseChange(ti, ei, e.target.value)}
                       >
                         <option value="">— wybierz ćwiczenie —</option>
                         {groupedExercises.map(section => (

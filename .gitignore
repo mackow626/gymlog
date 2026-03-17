@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+**/node_modules/
+frontend/node_modules
+worker/node_modules
+
+# Build outputs
+dist/
+**/dist/
+.wrangler/
+**/.wrangler/
+database-backup-*.sql
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
