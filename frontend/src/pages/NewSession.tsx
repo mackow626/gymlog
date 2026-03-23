@@ -2,18 +2,18 @@ import { useEffect, useMemo, useState, type WheelEvent } from 'react'
 import { api } from '../hooks/api'
 import type { Page } from '../App'
 
-interface SeriesEntry { weight_kg: string; reps: string }
+interface SeriesEntry { weight_kg: string; reps: string; comment: string }
 interface ExerciseEntry { exercise_id: number | null; series: SeriesEntry[] }
 interface TriSet { exercises: ExerciseEntry[] }
 interface SessionPayload {
   date: string
   notes?: string
   trisets: Array<{
-    exercises: Array<{ exercise_id: number; series: Array<{ weight_kg?: number; reps?: number }> }>
+    exercises: Array<{ exercise_id: number; series: Array<{ weight_kg?: number; reps?: number; comment?: string }> }>
   }>
 }
 
-const emptySeries = (): SeriesEntry => ({ weight_kg: '', reps: '' })
+const emptySeries = (): SeriesEntry => ({ weight_kg: '', reps: '', comment: '' })
 const emptyEx = (): ExerciseEntry => ({ exercise_id: null, series: [emptySeries(), emptySeries(), emptySeries()] })
 const emptyTriset = (): TriSet => ({ exercises: [emptyEx(), emptyEx(), emptyEx()] })
 
@@ -92,6 +92,7 @@ export function NewSession({ setPage, sessionId }: Props) {
                   return {
                     weight_kg: lastSeries?.weight_kg !== undefined ? String(lastSeries.weight_kg) : '',
                     reps: lastSeries?.reps !== undefined ? String(lastSeries.reps) : '',
+                    comment: typeof lastSeries?.comment === 'string' ? lastSeries.comment : '',
                   }
                 })
               })
@@ -161,6 +162,24 @@ export function NewSession({ setPage, sessionId }: Props) {
     ))
   }
 
+  const addExerciseToTriset = (ti: number) => {
+    setTrisets(ts => ts.map((triset, index) => (
+      index !== ti ? triset : { ...triset, exercises: [...triset.exercises, emptyEx()] }
+    )))
+  }
+
+  const removeExerciseFromTriset = (ti: number, ei: number) => {
+    setTrisets(ts => ts.map((triset, index) => {
+      if (index !== ti) return triset
+      if (triset.exercises.length <= 1) return triset
+
+      return {
+        ...triset,
+        exercises: triset.exercises.filter((_, exIndex) => exIndex !== ei),
+      }
+    }))
+  }
+
   const addTriset = () => setTrisets(ts => [...ts, emptyTriset()])
   const removeTriset = (i: number) => setTrisets(ts => ts.filter((_, j) => j !== i))
   const getExName = (id: number | null) =>
@@ -188,6 +207,38 @@ export function NewSession({ setPage, sessionId }: Props) {
       })
   }, [allExercises])
 
+  const exerciseById = useMemo(() => {
+    return new Map(allExercises.map(ex => [Number(ex.id), ex]))
+  }, [allExercises])
+
+  const seriesByMuscleGroup = useMemo(() => {
+    const totals: Record<string, number> = {}
+
+    for (const triset of trisets) {
+      for (const exercise of triset.exercises) {
+        if (!exercise.exercise_id) continue
+
+        const exerciseMeta = exerciseById.get(exercise.exercise_id)
+        if (!exerciseMeta) continue
+
+        const groups = parseMuscleGroups(exerciseMeta.muscle_groups)
+        if (!groups.length) continue
+
+        const seriesCount = exercise.series.filter(hasSeriesData).length
+        if (seriesCount < 1) continue
+
+        for (const group of groups) {
+          totals[group] = (totals[group] ?? 0) + seriesCount
+        }
+      }
+    }
+
+    return Object.entries(totals).sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1]
+      return a[0].localeCompare(b[0], 'pl')
+    })
+  }, [trisets, exerciseById])
+
   const validate = () => {
     const nextErrors: ValidationState = {}
     const hasAtLeastOneExercise = trisets.some(ts =>
@@ -214,8 +265,9 @@ export function NewSession({ setPage, sessionId }: Props) {
               .map(s => ({
                 weight_kg: s.weight_kg ? parseFloat(s.weight_kg) : undefined,
                 reps: s.reps ? parseInt(s.reps) : undefined,
+                comment: s.comment.trim() ? s.comment.trim() : undefined,
               }))
-              .filter(s => s.weight_kg !== undefined || s.reps !== undefined)
+              .filter(s => s.weight_kg !== undefined || s.reps !== undefined || s.comment !== undefined)
             return mapped.length ? mapped : [{}]
           })(),
         }))
@@ -303,7 +355,7 @@ export function NewSession({ setPage, sessionId }: Props) {
                       <span className="preview-name">{name}</span>
                       <div className="preview-chips">
                         {ex.series
-                          .filter(s => s.weight_kg || s.reps)
+                          .filter(s => hasSeriesData(s))
                           .map((s, si) => (
                             <span key={si} className="preview-chip accent">
                               <span className="chip-val">S{si + 1}</span>
@@ -337,6 +389,15 @@ export function NewSession({ setPage, sessionId }: Props) {
                           </optgroup>
                         ))}
                       </select>
+                      {ts.exercises.length > 1 && (
+                        <button
+                          className="btn-ghost btn-danger btn-sm"
+                          type="button"
+                          onClick={() => removeExerciseFromTriset(ti, ei)}
+                        >
+                          Usuń ćwiczenie
+                        </button>
+                      )}
                     </div>
                     <div className="series-list">
                       {ex.series.map((series, si) => (
@@ -359,6 +420,16 @@ export function NewSession({ setPage, sessionId }: Props) {
                                 onWheel={preventNumberScrollChange}
                                 onChange={e => updateSeries(ti, ei, si, 'reps', e.target.value)} />
                             </div>
+                            <div className="ex-input-cell ex-input-cell-wide">
+                              <label className="ex-input-label">KOMENTARZ</label>
+                              <textarea
+                                className="field-input ex-input ex-input-comment"
+                                rows={1}
+                                placeholder="np. wolne tempo / zapas 2 powt."
+                                value={series.comment}
+                                onChange={e => updateSeries(ti, ei, si, 'comment', e.target.value)}
+                              />
+                            </div>
                           </div>
                           {ex.series.length > 1 && (
                             <button
@@ -377,10 +448,34 @@ export function NewSession({ setPage, sessionId }: Props) {
                     </div>
                   </div>
                 ))}
+                <button className="btn-ghost btn-sm" type="button" onClick={() => addExerciseToTriset(ti)}>
+                  + Dodaj ćwiczenie do tri-setu
+                </button>
               </div>
             </div>
           )
         })}
+      </div>
+
+      <div className="session-summary-card">
+        <div className="session-summary-header">
+          <h3 className="section-title session-summary-title">Serie na partie ciała</h3>
+          <span className="session-summary-total">
+            Łącznie: {seriesByMuscleGroup.reduce((sum, [, count]) => sum + count, 0)}
+          </span>
+        </div>
+        {seriesByMuscleGroup.length === 0 ? (
+          <p className="empty-text">Brak danych. Wybierz ćwiczenia i uzupełnij przynajmniej jedną serię.</p>
+        ) : (
+          <div className="session-summary-list">
+            {seriesByMuscleGroup.map(([group, count]) => (
+              <div key={group} className="session-summary-row">
+                <span className="session-summary-group">{group}</span>
+                <span className="session-summary-count">{count} serii</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <button className="btn-outline btn-add-triset" onClick={addTriset}>
@@ -392,15 +487,19 @@ export function NewSession({ setPage, sessionId }: Props) {
 
 function mapSessionToTrisets(session: any): TriSet[] {
   const trisets = session.trisets?.map((ts: any) => ({
-    exercises: Array.from({ length: 3 }, (_, index) => {
-      const exercise = ts.exercises?.find((ex: any) => ex.position === index + 1)
-      if (!exercise) return emptyEx()
-
-      return {
+    exercises: (() => {
+      const sorted = [...(ts.exercises ?? [])].sort((a, b) => Number(a.position) - Number(b.position))
+      const mapped = sorted.map((exercise: any) => ({
         exercise_id: exercise.exercise_id ?? null,
         series: parseSeriesFromApi(exercise),
+      }))
+
+      while (mapped.length < 3) {
+        mapped.push(emptyEx())
       }
-    })
+
+      return mapped
+    })()
   }))
 
   return trisets?.length ? trisets : [emptyTriset()]
@@ -422,7 +521,8 @@ function getPrimaryMuscleGroup(exercise: any): string {
 function parseSeriesFromApi(exercise: any): SeriesEntry[] {
   const parsedWeights = parseNumberArray(exercise.weight_kg)
   const parsedReps = parseNumberArray(exercise.reps)
-  const fromArrays = Math.max(parsedWeights.length, parsedReps.length)
+  const parsedComments = parseStringArray(exercise.comments)
+  const fromArrays = Math.max(parsedWeights.length, parsedReps.length, parsedComments.length)
   const fromCount = Number.isFinite(Number(exercise.sets)) ? Number(exercise.sets) : 0
   const count = Math.max(fromArrays, fromCount, 1)
 
@@ -433,7 +533,56 @@ function parseSeriesFromApi(exercise: any): SeriesEntry[] {
     reps: parsedReps[index] !== undefined && parsedReps[index] !== null
       ? String(parsedReps[index])
       : '',
+    comment: parsedComments[index] ?? '',
   }))
+}
+
+function parseStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map(v => (v == null ? '' : String(v))).map(v => v.trim())
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return []
+
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (Array.isArray(parsed)) {
+        return parsed.map(v => (v == null ? '' : String(v))).map(v => v.trim())
+      }
+    } catch {
+      return [trimmed]
+    }
+  }
+
+  return []
+}
+
+function parseMuscleGroups(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return []
+
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+      }
+    } catch {
+      return []
+    }
+  }
+
+  return []
+}
+
+function hasSeriesData(series: SeriesEntry): boolean {
+  return Boolean(series.weight_kg || series.reps || series.comment.trim())
 }
 
 function parseNumberArray(value: unknown): Array<number | null> {

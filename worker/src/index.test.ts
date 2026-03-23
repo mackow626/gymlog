@@ -43,7 +43,7 @@ describe('Worker API endpoints', () => {
     })
 
     const res = await app.request('/api/sessions', {}, { DB: db as unknown as D1Database })
-    const body = await res.json()
+    const body = await res.json() as any
 
     expect(res.status).toBe(200)
     expect(body).toEqual([{ id: 6, date: '2026-03-16', notes: 'Test' }])
@@ -61,7 +61,7 @@ describe('Worker API endpoints', () => {
       { DB: db as unknown as D1Database }
     )
 
-    const body = await res.json()
+    const body = await res.json() as any
     expect(res.status).toBe(400)
     expect(body.error).toContain('Session must include a date')
   })
@@ -78,13 +78,13 @@ describe('Worker API endpoints', () => {
       { DB: db as unknown as D1Database }
     )
 
-    const body = await res.json()
+    const body = await res.json() as any
     expect(res.status).toBe(400)
     expect(body.error).toBe('Invalid session ID')
   })
 
   it('GET /api/exercises/:id/last-stats returns parsed series', async () => {
-    const db = new MockDB().on(/SELECT te\.weight_kg, te\.reps, te\.sets/i, {
+    const db = new MockDB().on(/SELECT te\.weight_kg, te\.reps, te\.comments, te\.sets/i, {
       first: {
         weight_kg: '[100,90,80]',
         reps: '[5,8,10]',
@@ -93,7 +93,7 @@ describe('Worker API endpoints', () => {
     })
 
     const res = await app.request('/api/exercises/41/last-stats', {}, { DB: db as unknown as D1Database })
-    const body = await res.json()
+    const body = await res.json() as any
 
     expect(res.status).toBe(200)
     expect(body).toEqual({
@@ -119,7 +119,7 @@ describe('Worker API endpoints', () => {
       })
 
     const res = await app.request('/api/stats/week', {}, { DB: db as unknown as D1Database })
-    const body = await res.json()
+    const body = await res.json() as any
 
     expect(res.status).toBe(200)
     expect(body.sessions).toBe(2)

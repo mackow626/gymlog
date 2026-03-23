@@ -493,6 +493,24 @@ body {
 
 .stat-chip.accent { color: var(--accent); border-color: rgba(0,229,255,0.2); }
 
+.stat-chip-series {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  max-width: min(100%, 320px);
+}
+
+.stat-chip-copy {
+  color: var(--accent);
+}
+
+.stat-chip-comment {
+  color: var(--text2);
+  white-space: normal;
+  line-height: 1.35;
+}
+
 /* ── EXERCISES ────────────────────────────────────────────────────────────── */
 
 .exercise-list { display: flex; flex-direction: column; gap: 2px; }
@@ -1150,6 +1168,10 @@ body {
   flex: 1;
 }
 
+.ex-input-cell-wide {
+  grid-column: 1 / -1;
+}
+
 .ex-input-cell {
   display: flex;
   flex-direction: column;
@@ -1172,6 +1194,71 @@ body {
   font-family: var(--mono);
   font-weight: 500;
   width: 100%;
+}
+
+.ex-input-comment {
+  text-align: left;
+  min-height: 2.2rem;
+  resize: vertical;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  padding: 0.55rem 0.65rem;
+  font-family: var(--font);
+}
+
+.session-summary-card {
+  margin-top: 1rem;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+}
+
+.session-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.session-summary-title {
+  margin: 0;
+}
+
+.session-summary-total {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 0.82rem;
+}
+
+.session-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.session-summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.session-summary-row:last-child {
+  border-bottom: none;
+}
+
+.session-summary-group {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.session-summary-count {
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 0.82rem;
 }
 
 /* hide arrows on number inputs */
@@ -1255,6 +1342,19 @@ body {
   }
 
   .series-row {
+    align-items: center;
+  }
+
+  .series-inputs {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .session-summary-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .session-summary-row {
     align-items: center;
   }
 }

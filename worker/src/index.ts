@@ -45,14 +45,19 @@ function normalizeSeriesForStorage(ex: {
   weight_kg?: number
   reps?: number
   sets?: number
-  series?: Array<{ weight_kg?: number; reps?: number }>
+  series?: Array<{ weight_kg?: number; reps?: number; comment?: string }>
 }) {
   if (Array.isArray(ex.series) && ex.series.length > 0) {
     const weights = ex.series.map(s => toNullableNumber(s.weight_kg))
     const reps = ex.series.map(s => toNullableNumber(s.reps))
+    const comments = ex.series.map(s => {
+      const value = typeof s.comment === 'string' ? s.comment.trim() : ''
+      return value.length ? value : null
+    })
     return {
       weights,
       reps,
+      comments,
       count: ex.series.length,
     }
   }
@@ -64,6 +69,7 @@ function normalizeSeriesForStorage(ex: {
   return {
     weights: Array.from({ length: count }, () => legacyWeight),
     reps: Array.from({ length: count }, () => legacyReps),
+    comments: Array.from({ length: count }, () => null),
     count,
   }
 }
@@ -139,14 +145,14 @@ app.get('/api/exercises/:id/last-stats', async (c) => {
   const exerciseId = c.req.param('id')
 
   const lastExercise = await c.env.DB.prepare(`
-    SELECT te.weight_kg, te.reps, te.sets
+    SELECT te.weight_kg, te.reps, te.comments, te.sets
     FROM triset_exercises te
     JOIN trisets ts ON ts.id = te.triset_id
     JOIN sessions s ON s.id = ts.session_id
     WHERE te.exercise_id = ?
     ORDER BY s.date DESC, s.id DESC
     LIMIT 1
-  `).bind(exerciseId).first<{ weight_kg: string; reps: string; sets: number }>()
+  `).bind(exerciseId).first<{ weight_kg: string; reps: string; comments?: string; sets: number }>()
 
   if (!lastExercise) {
     return c.json(null)
@@ -155,19 +161,24 @@ app.get('/api/exercises/:id/last-stats', async (c) => {
   try {
     const weights = JSON.parse(lastExercise.weight_kg ?? '[]')
     const reps = JSON.parse(lastExercise.reps ?? '[]')
+    const comments = JSON.parse(lastExercise.comments ?? '[]')
     const count = Number.isFinite(Number(lastExercise.sets)) ? Number(lastExercise.sets) : Math.max(
       Array.isArray(weights) ? weights.length : 0,
-      Array.isArray(reps) ? reps.length : 0
+      Array.isArray(reps) ? reps.length : 0,
+      Array.isArray(comments) ? comments.length : 0
     )
 
     // Build series array from parsed weights and reps
     const series = Array.from({ length: count }, (_, i) => ({
       weight_kg: Array.isArray(weights) && i < weights.length ? weights[i] : undefined,
       reps: Array.isArray(reps) && i < reps.length ? reps[i] : undefined,
+      comment: Array.isArray(comments) && i < comments.length && typeof comments[i] === 'string'
+        ? comments[i]
+        : undefined,
     }))
 
     // Filter out series with no data
-    const filteredSeries = series.filter(s => s.weight_kg !== undefined || s.reps !== undefined)
+    const filteredSeries = series.filter(s => s.weight_kg !== undefined || s.reps !== undefined || s.comment !== undefined)
 
     if (filteredSeries.length === 0) {
       return c.json(null)
@@ -221,7 +232,7 @@ app.post('/api/sessions', async (c) => {
         weight_kg?: number
         reps?: number
         sets?: number
-        series?: Array<{ weight_kg?: number; reps?: number }>
+        series?: Array<{ weight_kg?: number; reps?: number; comment?: string }>
       }>
     }>
   }>()
@@ -251,13 +262,14 @@ app.post('/api/sessions', async (c) => {
         const ex = ts.exercises[ei]
         const normalized = normalizeSeriesForStorage(ex)
         await c.env.DB.prepare(
-          'INSERT INTO triset_exercises (triset_id, exercise_id, position, weight_kg, reps, sets) VALUES (?,?,?,?,?,?)'
+          'INSERT INTO triset_exercises (triset_id, exercise_id, position, weight_kg, reps, comments, sets) VALUES (?,?,?,?,?,?,?)'
         ).bind(
           tsId,
           ex.exercise_id,
           ei + 1,
           JSON.stringify(normalized.weights),
           JSON.stringify(normalized.reps),
+          JSON.stringify(normalized.comments),
           normalized.count
         ).run()
       }
@@ -283,7 +295,7 @@ app.put('/api/sessions/:id', async (c) => {
         weight_kg?: number
         reps?: number
         sets?: number
-        series?: Array<{ weight_kg?: number; reps?: number }>
+        series?: Array<{ weight_kg?: number; reps?: number; comment?: string }>
       }>
     }>
   }>()
@@ -326,13 +338,14 @@ app.put('/api/sessions/:id', async (c) => {
         const ex = ts.exercises[ei]
         const normalized = normalizeSeriesForStorage(ex)
         await c.env.DB.prepare(
-          'INSERT INTO triset_exercises (triset_id, exercise_id, position, weight_kg, reps, sets) VALUES (?,?,?,?,?,?)'
+          'INSERT INTO triset_exercises (triset_id, exercise_id, position, weight_kg, reps, comments, sets) VALUES (?,?,?,?,?,?,?)'
         ).bind(
           tsId,
           ex.exercise_id,
           ei + 1,
           JSON.stringify(normalized.weights),
           JSON.stringify(normalized.reps),
+          JSON.stringify(normalized.comments),
           normalized.count
         ).run()
       }
