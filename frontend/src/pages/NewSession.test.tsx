@@ -181,4 +181,91 @@ describe('NewSession exercise suggestions', () => {
       expect(selectsAfter).toHaveLength(4)
     })
   })
+
+  it('in edit mode saves and stays on page when clicking Zapisz', async () => {
+    const setPage = vi.fn()
+
+    vi.mocked(api.getExercises).mockResolvedValue([
+      { id: 41, name: 'Wykroki z hantlami', muscle_groups: '["nogi"]' },
+    ])
+    vi.mocked(api.getSession).mockResolvedValue({
+      id: 77,
+      date: '2026-03-23',
+      notes: 'test',
+      trisets: [
+        {
+          id: 1,
+          position: 1,
+          exercises: [
+            {
+              id: 500,
+              position: 1,
+              exercise_id: 41,
+              weight_kg: '[40]',
+              reps: '[10]',
+              comments: '["ok"]',
+              sets: 1,
+            },
+          ],
+        },
+      ],
+    })
+    vi.mocked(api.updateSession).mockResolvedValue({ ok: true })
+
+    render(<NewSession setPage={setPage} sessionId={77} />)
+
+    await screen.findByText('Edytuj trening')
+
+    const saveButtons = screen.getAllByRole('button', { name: 'Zapisz' })
+    await userEvent.click(saveButtons[0])
+
+    await waitFor(() => {
+      expect(api.updateSession).toHaveBeenCalledWith(77, expect.any(Object))
+      expect(setPage).not.toHaveBeenCalled()
+      expect(screen.getByText('Zapisano zmiany.')).toBeInTheDocument()
+    })
+  })
+
+  it('in edit mode saves and exits when clicking Zapisz i wyjdź', async () => {
+    const setPage = vi.fn()
+
+    vi.mocked(api.getExercises).mockResolvedValue([
+      { id: 41, name: 'Wykroki z hantlami', muscle_groups: '["nogi"]' },
+    ])
+    vi.mocked(api.getSession).mockResolvedValue({
+      id: 88,
+      date: '2026-03-23',
+      notes: 'test',
+      trisets: [
+        {
+          id: 1,
+          position: 1,
+          exercises: [
+            {
+              id: 501,
+              position: 1,
+              exercise_id: 41,
+              weight_kg: '[45]',
+              reps: '[8]',
+              comments: '["ciężko"]',
+              sets: 1,
+            },
+          ],
+        },
+      ],
+    })
+    vi.mocked(api.updateSession).mockResolvedValue({ ok: true })
+
+    render(<NewSession setPage={setPage} sessionId={88} />)
+
+    await screen.findByText('Edytuj trening')
+
+    const saveAndExitButtons = screen.getAllByRole('button', { name: 'Zapisz i wyjdź' })
+    await userEvent.click(saveAndExitButtons[0])
+
+    await waitFor(() => {
+      expect(api.updateSession).toHaveBeenCalledWith(88, expect.any(Object))
+      expect(setPage).toHaveBeenCalledWith({ name: 'session', id: 88 })
+    })
+  })
 })

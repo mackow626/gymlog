@@ -35,6 +35,7 @@ export function NewSession({ setPage, sessionId }: Props) {
   const [loading, setLoading] = useState(Boolean(sessionId))
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<ValidationState>({})
+  const [saveNotice, setSaveNotice] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -59,6 +60,10 @@ export function NewSession({ setPage, sessionId }: Props) {
       cancelled = true
     }
   }, [sessionId])
+
+  useEffect(() => {
+    if (saveNotice) setSaveNotice(null)
+  }, [date, notes, trisets])
 
   const updateEx = (ti: number, ei: number, field: keyof ExerciseEntry, value: any) => {
     setErrors(current => ({ ...current, general: undefined }))
@@ -295,10 +300,31 @@ export function NewSession({ setPage, sessionId }: Props) {
     }
   }
 
+  const saveEdit = async (mode: 'stay' | 'exit') => {
+    if (!validate() || !sessionId) return
+
+    setSaving(true)
+    try {
+      const payload = buildPayload()
+      await api.updateSession(sessionId, payload)
+
+      if (mode === 'exit') {
+        setPage({ name: 'session', id: sessionId })
+      } else {
+        setSaveNotice('Zapisano zmiany.')
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Nie udało się zapisać treningu.'
+      setErrors(current => ({ ...current, general: message }))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (loading) return <div className="loading"><div className="spinner" /></div>
 
   return (
-    <div className="page">
+    <div className={sessionId ? 'page page-edit-session' : 'page'}>
       <div className="page-header">
         <div>
           <button
@@ -310,9 +336,20 @@ export function NewSession({ setPage, sessionId }: Props) {
           <h2 className="page-title">{sessionId ? 'Edytuj trening' : 'Nowy trening'}</h2>
           <p className="page-sub">{sessionId ? 'Zmień dane zapisanej sesji' : 'Dodaj tri-sety'}</p>
         </div>
-        <button className="btn-primary" onClick={save} disabled={saving}>
-          {saving ? 'Zapisuję...' : sessionId ? 'Zapisz zmiany' : 'Zapisz trening'}
-        </button>
+        {sessionId ? (
+          <div className="page-actions">
+            <button className="btn-ghost" onClick={() => saveEdit('exit')} disabled={saving}>
+              {saving ? 'Zapisuję...' : 'Zapisz i wyjdź'}
+            </button>
+            <button className="btn-primary" onClick={() => saveEdit('stay')} disabled={saving}>
+              {saving ? 'Zapisuję...' : 'Zapisz'}
+            </button>
+          </div>
+        ) : (
+          <button className="btn-primary" onClick={save} disabled={saving}>
+            {saving ? 'Zapisuję...' : 'Zapisz trening'}
+          </button>
+        )}
       </div>
 
       <div className="session-meta">
@@ -330,6 +367,7 @@ export function NewSession({ setPage, sessionId }: Props) {
       </div>
 
       {errors.general && <div className="form-error-banner">{errors.general}</div>}
+      {saveNotice && <div className="form-success-banner">{saveNotice}</div>}
 
       <div className="trisets-container">
         {trisets.map((ts, ti) => {
@@ -481,6 +519,17 @@ export function NewSession({ setPage, sessionId }: Props) {
       <button className="btn-outline btn-add-triset" onClick={addTriset}>
         + Dodaj nowy tri-set
       </button>
+
+      {sessionId && (
+        <div className="edit-save-bar">
+          <button className="btn-ghost" onClick={() => saveEdit('exit')} disabled={saving}>
+            {saving ? 'Zapisuję...' : 'Zapisz i wyjdź'}
+          </button>
+          <button className="btn-primary" onClick={() => saveEdit('stay')} disabled={saving}>
+            {saving ? 'Zapisuję...' : 'Zapisz'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -306,6 +306,26 @@ body {
 
 .btn-add-triset { margin-top: 1rem; }
 
+.edit-save-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  display: flex;
+  gap: 0.6rem;
+  background: rgba(8, 11, 15, 0.92);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  backdrop-filter: blur(8px);
+}
+
+.edit-save-bar .btn-ghost,
+.edit-save-bar .btn-primary {
+  flex: 1;
+  justify-content: center;
+}
+
 /* ── FIELDS ───────────────────────────────────────────────────────────────── */
 
 .field-label {
@@ -354,6 +374,17 @@ body {
   border: 1px solid rgba(255,68,102,0.3);
   background: rgba(255,68,102,0.08);
   color: #ff8aa0;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-family: var(--mono);
+}
+
+.form-success-banner {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(0,255,136,0.35);
+  background: rgba(0,255,136,0.08);
+  color: #8cffc7;
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
   font-family: var(--mono);
@@ -889,6 +920,10 @@ body {
     -webkit-overflow-scrolling: touch;
   }
 
+  .page-edit-session {
+    padding-bottom: calc(170px + env(safe-area-inset-bottom));
+  }
+
   /* Page header stacks on mobile */
   .page-header {
     flex-direction: column;
@@ -984,6 +1019,17 @@ body {
   /* Period toggle full width */
   .period-toggle { width: 100%; }
   .toggle-btn { flex: 1; text-align: center; }
+
+  .edit-save-bar {
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(66px + env(safe-area-inset-bottom) + 0.5rem);
+    margin-top: 0;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    flex-direction: column;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  }
 }
 
 /* Extra small phones */
