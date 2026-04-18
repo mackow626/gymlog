@@ -9,7 +9,7 @@ interface QuizQuestion {
 }
 
 const QUESTIONS_PER_GAME = 10
-const QUIZ_VERSION = 1
+const QUIZ_VERSION = 2
 const BEST_SCORE_KEY = 'maja_quiz_best_score'
 
 function shuffle<T>(items: T[]): T[] {
@@ -447,6 +447,14 @@ export function MajaQuiz() {
             W każdej rundzie losowanych jest 10 pytań z dużej puli wygenerowanej na
             podstawie lekcji 2 i 3.
           </p>
+          <div className="maja-switch">
+            <a className="maja-switch-link is-active" href="/maja/historia">
+              Historia
+            </a>
+            <a className="maja-switch-link" href="/maja/angielski">
+              Angielski
+            </a>
+          </div>
           <p className="maja-meta">
             Aktualna pula pytań: {questionPool.length} | Najlepszy wynik: {bestScore}/10
           </p>

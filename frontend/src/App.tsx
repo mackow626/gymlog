@@ -7,6 +7,8 @@ import { NewSession } from './pages/NewSession'
 import { SessionDetail } from './pages/SessionDetail'
 import { Stats } from './pages/Stats'
 import { MajaQuiz } from './pages/MajaQuiz'
+import { MajaEnglishQuiz } from './pages/MajaEnglishQuiz'
+import { MajaHub } from './pages/MajaHub'
 import { Nav } from './components/Nav'
 
 export type Page =
@@ -25,7 +27,15 @@ export default function App() {
   const path = window.location.pathname.replace(/\/+$/, '') || '/'
 
   if (path === '/maja') {
+    return <MajaHub />
+  }
+
+  if (path === '/maja/historia') {
     return <MajaQuiz />
+  }
+
+  if (path === '/maja/angielski') {
+    return <MajaEnglishQuiz />
   }
 
   const [authed, setAuthed] = useState(() => sessionStorage.getItem(AUTH_KEY) === '1')

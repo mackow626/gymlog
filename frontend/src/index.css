@@ -495,6 +495,80 @@ body.maja-body {
   accent-color: #ffb366;
 }
 
+.maja-switch {
+  margin-top: 0.7rem;
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.maja-switch-link {
+  text-decoration: none;
+  color: #ffe7c6;
+  border: 1px solid rgba(255, 224, 180, 0.35);
+  background: rgba(255, 252, 245, 0.08);
+  border-radius: 999px;
+  padding: 0.28rem 0.62rem;
+  font-size: 0.8rem;
+  font-family: var(--mono);
+}
+
+.maja-switch-link.is-active {
+  border-color: #ffca74;
+  background: rgba(255, 202, 116, 0.18);
+  color: #fff5df;
+}
+
+.maja-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.maja-hub-card {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  background: rgba(15, 18, 24, 0.62);
+  border: 1px solid rgba(255, 214, 157, 0.32);
+  border-radius: 18px;
+  padding: 1rem;
+  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.maja-hub-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 203, 128, 0.8);
+  background: rgba(24, 28, 36, 0.75);
+}
+
+.maja-hub-card h2 {
+  margin-top: 0.3rem;
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.maja-hub-card p {
+  margin-top: 0.5rem;
+  color: rgba(255, 241, 219, 0.9);
+}
+
+.maja-hub-card span {
+  margin-top: 0.75rem;
+  display: inline-block;
+  font-size: 0.8rem;
+  font-family: var(--mono);
+  color: rgba(255, 225, 180, 0.9);
+}
+
+.maja-hub-kicker {
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+  font-family: var(--mono);
+  color: rgba(255, 214, 157, 0.9);
+}
+
 .maja-card {
   background: rgba(15, 18, 24, 0.62);
   border: 1px solid rgba(255, 214, 157, 0.32);
@@ -745,6 +819,10 @@ body.maja-body {
   .maja-version {
     top: 0.7rem;
     right: 0.7rem;
+  }
+
+  .maja-hub-grid {
+    grid-template-columns: 1fr;
   }
 }
 
