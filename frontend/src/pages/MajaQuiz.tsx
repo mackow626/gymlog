@@ -9,6 +9,8 @@ interface QuizQuestion {
 }
 
 const QUESTIONS_PER_GAME = 10
+const QUIZ_VERSION = 1
+const BEST_SCORE_KEY = 'maja_quiz_best_score'
 
 function shuffle<T>(items: T[]): T[] {
   const copy = [...items]
@@ -45,15 +47,15 @@ function createQuestionPool(): QuizQuestion[] {
   }
 
   const events = [
-    { name: 'wojna Polski ze Szwecja o wschodnie wybrzeza Baltyku', year: '1600-1611' },
+    { name: 'wojna Polski ze Szwecją o wybrzeża Bałtyku', year: '1600-1611' },
     { name: 'bitwa pod Kircholmem', year: '1605' },
     { name: 'potop szwedzki', year: '1655-1660' },
-    { name: 'pokoj w Oliwie', year: '1660' },
-    { name: 'odsiecz wiedenska Jana III Sobieskiego', year: '1683' },
+    { name: 'pokój w Oliwie', year: '1660' },
+    { name: 'odsiecz wiedeńska Jana III Sobieskiego', year: '1683' },
     { name: 'uchwalenie Konstytucji 3 maja', year: '1791' },
-    { name: 'powstanie kosciuszkowskie', year: '1794' },
+    { name: 'powstanie kościuszkowskie', year: '1794' },
     { name: 'bitwa pod Maciejowicami', year: '1794' },
-    { name: 'trzeci rozbior Polski', year: '1795' },
+    { name: 'trzeci rozbiór Polski', year: '1795' },
   ]
 
   const allYears = [...new Set(events.map((event) => event.year))]
@@ -66,10 +68,10 @@ function createQuestionPool(): QuizQuestion[] {
     )
 
     addQuestion(
-      `W ktorym okresie odbylo sie wydarzenie: ${event.name}?`,
+      `Kiedy wydarzyło się: ${event.name}?`,
       [event.year, ...yearDistractors],
       event.year,
-      `To wydarzenie przypada na okres ${event.year}.`,
+      `Zapamiętaj: ${event.name} miało miejsce w okresie ${event.year}.`,
     )
 
     const eventDistractors = pickRandom(
@@ -78,45 +80,45 @@ function createQuestionPool(): QuizQuestion[] {
     )
 
     addQuestion(
-      `Co wydarzylo sie w okresie: ${event.year}?`,
+      `Co wydarzyło się w okresie ${event.year}?`,
       [event.name, ...eventDistractors],
       event.name,
-      `${event.year} to data wydarzenia: ${event.name}.`,
+      `Zapamiętaj: w okresie ${event.year} wydarzyło się: ${event.name}.`,
     )
   })
 
   const people = [
     {
       name: 'Jan III Sobieski',
-      role: 'krol, ktory poprowadzil odsiecz wiedenska i pokonal Turkow',
+      role: 'król, który poprowadził odsiecz wiedeńską i pokonał Turków',
     },
     {
       name: 'Stefan Czarniecki',
-      role: 'dowodca wojny podjazdowej przeciw Szwedom podczas potopu',
+      role: 'dowódca wojny podjazdowej przeciw Szwedom podczas potopu',
     },
     {
       name: 'Augustyn Kordecki',
-      role: 'przeor i dowodca obrony Jasnej Gory',
+      role: 'przeor i dowódca obrony Jasnej Góry',
     },
     {
       name: 'Kara Mustafa',
-      role: 'wielki wezyr dowodzacy armia turecka oblegajaca Wieden',
+      role: 'wielki wezyr dowodzący armią turecką oblegającą Wiedeń',
     },
     {
-      name: 'Tadeusz Kosciuszko',
+      name: 'Tadeusz Kościuszko',
       role: 'naczelnik powstania narodowego z 1794 roku',
     },
     {
-      name: 'Wojciech Bartos Glowacki',
-      role: 'kosynier, ktory gaszac lont armaty wslawil sie pod Raclawicami',
+      name: 'Wojciech Bartosz Głowacki',
+      role: 'kosynier, który zasłynął pod Racławicami',
     },
     {
-      name: 'Stanislaw August Poniatowski',
-      role: 'ostatni krol Polski, ktory abdykowal po III rozbiorze',
+      name: 'Stanisław August Poniatowski',
+      role: 'ostatni król Polski, który abdykował po III rozbiorze',
     },
     {
       name: 'Jan Heweliusz',
-      role: 'astronom, ktory nazwal gwiazdozbior Tarcza Sobieskiego',
+      role: 'astronom, który nazwał gwiazdozbiór Tarczą Sobieskiego',
     },
   ]
 
@@ -133,7 +135,7 @@ function createQuestionPool(): QuizQuestion[] {
       `Kto to jest: ${person.role}?`,
       [person.name, ...nameDistractors],
       person.name,
-      `To postac: ${person.name}.`,
+      `Zapamiętaj: chodzi o postać ${person.name}.`,
     )
 
     const roleDistractors = pickRandom(
@@ -142,41 +144,41 @@ function createQuestionPool(): QuizQuestion[] {
     )
 
     addQuestion(
-      `Zaznacz poprawny opis postaci: ${person.name}.`,
+      `Wybierz poprawny opis postaci: ${person.name}.`,
       [person.role, ...roleDistractors],
       person.role,
-      `Poprawny opis to: ${person.role}.`,
+      `Zapamiętaj: ${person.name} to ${person.role}.`,
     )
   })
 
   const terms = [
     {
       term: 'odsiecz',
-      definition: 'zbrojna pomoc dla oblezonego miasta lub zamku',
+      definition: 'zbrojna pomoc dla oblężonego miasta lub zamku',
     },
     {
       term: 'wiktoria',
-      definition: 'zwyciestwo',
+      definition: 'zwycięstwo',
     },
     {
       term: 'epidemia',
-      definition: 'duza liczba zachorowan na danym terenie',
+      definition: 'duża liczba zachorowań na danym terenie',
     },
     {
       term: 'powstanie',
-      definition: 'zbrojne wystapienie ludnosci przeciw wladzy lub obcym wojskom',
+      definition: 'zbrojne wystąpienie ludności przeciw władzy lub obcym wojskom',
     },
     {
       term: 'wielki wezyr',
-      definition: 'naczelny wodz wojsk tureckich',
+      definition: 'naczelny wódz wojsk tureckich',
     },
     {
       term: 'zaborcy',
-      definition: 'Rosja, Prusy i Austria dokonujace rozbiorow Polski',
+      definition: 'Rosja, Prusy i Austria, które dokonały rozbiorów Polski',
     },
     {
       term: 'kosynierzy',
-      definition: 'chlopi uzbrojeni w kosy, walczacy m.in. pod Raclawicami',
+      definition: 'chłopi uzbrojeni w kosy, walczący m.in. pod Racławicami',
     },
   ]
 
@@ -190,10 +192,10 @@ function createQuestionPool(): QuizQuestion[] {
     )
 
     addQuestion(
-      `Co oznacza pojecie: ${entry.term}?`,
+      `Co oznacza pojęcie: ${entry.term}?`,
       [entry.definition, ...definitionDistractors],
       entry.definition,
-      `Definicja pojecia ${entry.term}: ${entry.definition}.`,
+      `Zapamiętaj: ${entry.term} to ${entry.definition}.`,
     )
 
     const termDistractors = pickRandom(
@@ -202,75 +204,75 @@ function createQuestionPool(): QuizQuestion[] {
     )
 
     addQuestion(
-      `Ktore pojecie pasuje do definicji: ${entry.definition}?`,
+      `Które pojęcie pasuje do definicji: ${entry.definition}?`,
       [entry.term, ...termDistractors],
       entry.term,
-      `Ta definicja dotyczy pojecia: ${entry.term}.`,
+      `Zapamiętaj: ta definicja dotyczy pojęcia ${entry.term}.`,
     )
   })
 
   addQuestion(
-    'Dlaczego XVII wiek nazwano stuleciem wojen?',
+    'Dlaczego XVII wiek nazywamy stuleciem wojen?',
     [
-      'Rzeczpospolita toczyla liczne wojny m.in. ze Szwecja, Rosja i Turcja',
-      'Polska prowadzila tylko wojny domowe i nie walczyla z sasiadami',
-      'Panowal calkowity pokoj, ale nazwa byla umowna',
-      'Rzeczpospolita walczyla jedynie z Austria',
+      'Rzeczpospolita toczyła liczne wojny m.in. ze Szwecją, Rosją i Turcją',
+      'Polska prowadziła tylko wojny domowe i nie walczyła z sąsiadami',
+      'Panował całkowity pokój, a nazwa jest przypadkowa',
+      'Rzeczpospolita walczyła tylko z Austrią',
     ],
-    'Rzeczpospolita toczyla liczne wojny m.in. ze Szwecja, Rosja i Turcja',
-    'W XVII wieku Rzeczpospolita byla uwiklana w liczne konflikty zbrojne.',
+    'Rzeczpospolita toczyła liczne wojny m.in. ze Szwecją, Rosją i Turcją',
+    'Zapamiętaj: było dużo wojen z sąsiadami, dlatego to „stulecie wojen”.',
   )
 
   addQuestion(
-    'Kto glownie stawial opor podczas potopu szwedzkiego?',
+    'Kto głównie stawiał opór podczas potopu szwedzkiego?',
     [
-      'chlopi, mieszczanie i drobna szlachta',
-      'wylacznie magnaci',
-      'wylacznie armia zaciagowa Francji',
+      'chłopi, mieszczanie i drobna szlachta',
+      'wyłącznie magnaci',
+      'wyłącznie armia zaciężna Francji',
       'tylko duchowni z Rzymu',
     ],
-    'chlopi, mieszczanie i drobna szlachta',
-    'Wlasnie te grupy bronily dorobku i stawialy opor najezdzcy.',
+    'chłopi, mieszczanie i drobna szlachta',
+    'Zapamiętaj: zwykli ludzie bronili swoich domów i dobytku.',
   )
 
   addQuestion(
-    'Na czym polegala wojna podjazdowa stosowana przez Czarnieckiego?',
+    'Na czym polegała wojna podjazdowa stosowana przez Czarnieckiego?',
     [
-      'na znienacka atakowaniu mniejszych oddzialow wroga',
-      'na stalej obronie jednego zamku',
-      'na pojedynkach dowodcow na szable',
-      'na walce tylko artyleria z duzej odleglosci',
+      'na atakowaniu z zaskoczenia mniejszych oddziałów wroga',
+      'na stałej obronie jednego zamku',
+      'na pojedynkach dowódców na szable',
+      'na walce tylko artylerią z dużej odległości',
     ],
-    'na znienacka atakowaniu mniejszych oddzialow wroga',
-    'To taktyka szybkich i zaskakujacych atakow na oslabione oddzialy przeciwnika.',
+    'na atakowaniu z zaskoczenia mniejszych oddziałów wroga',
+    'Zapamiętaj: szybki atak, zaskoczenie i odwrót to sedno tej taktyki.',
   )
 
   addQuestion(
-    'Jaki skutek miala obrona Jasnej Gory?',
+    'Jaki skutek miała obrona Jasnej Góry?',
     [
-      'zmotywowala Polakow do dalszej walki ze Szwedami',
-      'zakonczyla natychmiast wszystkie wojny w Europie',
-      'spowodowala poddanie sie wojsk polskich',
-      'doprowadzila do sojuszu Polski ze Szwecja',
+      'zmotywowała Polaków do dalszej walki ze Szwedami',
+      'zakończyła od razu wszystkie wojny w Europie',
+      'spowodowała poddanie się wojsk polskich',
+      'doprowadziła do sojuszu Polski ze Szwecją',
     ],
-    'zmotywowala Polakow do dalszej walki ze Szwedami',
-    'Zwyciestwo podnioslo morale i stalo sie waznym symbolem oporu.',
+    'zmotywowała Polaków do dalszej walki ze Szwedami',
+    'Zapamiętaj: obrona Jasnej Góry dodała ludziom wiary w zwycięstwo.',
   )
 
   addQuestion(
-    'Jaka byla glowna bron husarii?',
+    'Jaka była główna broń husarii?',
     [
-      'kopia o dlugosci nawet do 5 metrow',
-      'luk refleksyjny',
+      'kopia o długości nawet do 5 metrów',
+      'łuk refleksyjny',
       'muszkiet lontowy',
       'halabarda',
     ],
-    'kopia o dlugosci nawet do 5 metrow',
-    'Kopia stanowila podstawowa bron uderzeniowa husarza.',
+    'kopia o długości nawet do 5 metrów',
+    'Zapamiętaj: husarz najpierw uderzał długą kopią.',
   )
 
   addQuestion(
-    'Ktore panstwa dokonaly rozbiorow Polski?',
+    'Które państwa dokonały rozbiorów Polski?',
     [
       'Rosja, Prusy i Austria',
       'Szwecja, Dania i Norwegia',
@@ -278,50 +280,50 @@ function createQuestionPool(): QuizQuestion[] {
       'Turcja, Persja i Rosja',
     ],
     'Rosja, Prusy i Austria',
-    'To te trzy panstwa byly zaborcami Rzeczypospolitej.',
+    'Zapamiętaj: zaborcy to Rosja, Prusy i Austria.',
   )
 
   addQuestion(
-    'Co bylo bezposrednim skutkiem upadku powstania kosciuszkowskiego?',
+    'Co było bezpośrednim skutkiem upadku powstania kościuszkowskiego?',
     [
-      'trzeci rozbior Polski i utrata niepodleglosci',
+      'trzeci rozbiór Polski i utrata niepodległości',
       'natychmiastowe odzyskanie wszystkich ziem',
-      'uniewaznienie wszystkich rozbiorow',
-      'powstanie niepodleglej Litwy i Bialorusi',
+      'unieważnienie wszystkich rozbiorów',
+      'powstanie niepodległej Litwy i Białorusi',
     ],
-    'trzeci rozbior Polski i utrata niepodleglosci',
-    'Po klesce powstania doszlo do trzeciego rozbioru i zaniku panstwa z mapy.',
+    'trzeci rozbiór Polski i utrata niepodległości',
+    'Zapamiętaj: po klęsce powstania był III rozbiór i Polska zniknęła z mapy.',
   )
 
   addQuestion(
-    'Gdzie dzis mozna zobaczyc Panorame Raclawicka?',
+    'Gdzie dziś można zobaczyć Panoramę Racławicką?',
     [
-      'we Wroclawiu, w specjalnej rotundzie',
+      'we Wrocławiu, w specjalnej rotundzie',
       'w Krakowie, na Wawelu',
-      'w Warszawie, w Zamku Krolewskim',
+      'w Warszawie, w Zamku Królewskim',
       'w Gdansku, w Dworze Artusa',
     ],
-    'we Wroclawiu, w specjalnej rotundzie',
-    'Panorama Raclawicka jest eksponowana we Wroclawiu.',
+    'we Wrocławiu, w specjalnej rotundzie',
+    'Zapamiętaj: Panorama Racławicka znajduje się we Wrocławiu.',
   )
 
   addQuestion(
-    'Ile lat Rzeczpospolita pozostawala poza mapa Europy po III rozbiorze?',
+    'Ile lat Rzeczpospolita była poza mapą Europy po III rozbiorze?',
     ['123 lata', '33 lata', '70 lat', '200 lat'],
     '123 lata',
-    'Po III rozbiorze Polska zniknela z mapy Europy na 123 lata.',
+    'Zapamiętaj: po III rozbiorze Polska zniknęła z mapy Europy na 123 lata.',
   )
 
   addQuestion(
-    'Ktore panstwa (oprocz Polski) leza dzis na obszarze dawnej Rzeczypospolitej?',
+    'Które państwa (oprócz Polski) leżą dziś na obszarze dawnej Rzeczypospolitej?',
     [
-      'Litwa, Lotwa, Bialorus i Ukraina',
-      'Niemcy, Czechy, Slowacja i Wegry',
-      'Rumunia, Bulgaria, Serbia i Chorwacja',
+      'Litwa, Łotwa, Białoruś i Ukraina',
+      'Niemcy, Czechy, Słowacja i Węgry',
+      'Rumunia, Bułgaria, Serbia i Chorwacja',
       'Belgia, Holandia, Luksemburg i Dania',
     ],
-    'Litwa, Lotwa, Bialorus i Ukraina',
-    'Wlasnie te cztery panstwa wymieniono we fragmencie o sladach dawnej Rzeczypospolitej.',
+    'Litwa, Łotwa, Białoruś i Ukraina',
+    'Zapamiętaj: to cztery państwa na obszarze dawnej Rzeczypospolitej.',
   )
 
   return questions
@@ -331,6 +333,7 @@ export function MajaQuiz() {
   const questionPool = useMemo(() => createQuestionPool(), [])
   const [gameVersion, setGameVersion] = useState(0)
   const [learningMode, setLearningMode] = useState(true)
+  const [bestScore, setBestScore] = useState(0)
 
   const questions = useMemo(
     () => pickRandom(questionPool, QUESTIONS_PER_GAME),
@@ -386,6 +389,19 @@ export function MajaQuiz() {
 
   const percentage = Math.round((score / questions.length) * 100)
 
+  useEffect(() => {
+    const savedBest = Number(localStorage.getItem(BEST_SCORE_KEY) || '0')
+    setBestScore(Number.isFinite(savedBest) ? savedBest : 0)
+  }, [])
+
+  useEffect(() => {
+    if (!finished) return
+    if (score <= bestScore) return
+
+    setBestScore(score)
+    localStorage.setItem(BEST_SCORE_KEY, String(score))
+  }, [finished, score, bestScore])
+
   const handleAnswer = (choiceIndex: number) => {
     if (finished) return
 
@@ -419,23 +435,28 @@ export function MajaQuiz() {
     <div className="maja-shell">
       <div className="maja-glow maja-glow-a" />
       <div className="maja-glow maja-glow-b" />
+      <p className="maja-version" aria-label="Wersja quizu">
+        Wersja v{QUIZ_VERSION}
+      </p>
 
       <main className="maja-wrap">
         <header className="maja-header">
-          <p className="maja-kicker">Historia | Rozdzial III</p>
+          <p className="maja-kicker">Historia | Rozdział III</p>
           <h1 className="maja-title">Quiz dla Mai</h1>
           <p className="maja-sub">
-            W kazdej rundzie losowanych jest 10 pytan z duzej puli automatycznie generowanej
-            na podstawie lekcji 2 i 3.
+            W każdej rundzie losowanych jest 10 pytań z dużej puli wygenerowanej na
+            podstawie lekcji 2 i 3.
           </p>
-          <p className="maja-meta">Aktualna pula pytan: {questionPool.length}</p>
+          <p className="maja-meta">
+            Aktualna pula pytań: {questionPool.length} | Najlepszy wynik: {bestScore}/10
+          </p>
           <label className="maja-learn-toggle">
             <input
               type="checkbox"
               checked={learningMode}
               onChange={(event) => setLearningMode(event.target.checked)}
             />
-            <span>Tryb nauki (pokaz od razu, czy odpowiedz jest dobra)</span>
+            <span>Tryb nauki (pokazuj od razu, czy odpowiedź jest dobra)</span>
           </label>
         </header>
 
@@ -477,14 +498,17 @@ export function MajaQuiz() {
             {learningMode && hasAnsweredCurrent && (
               <div className={`maja-feedback ${isCurrentCorrect ? 'ok' : 'bad'}`}>
                 <p className="maja-feedback-title">
-                  {isCurrentCorrect ? 'Dobra odpowiedz! Super.' : 'To jeszcze nie to.'}
+                  {isCurrentCorrect ? 'Dobra odpowiedź! Super.' : 'To jeszcze nie to.'}
                 </p>
                 {!isCurrentCorrect && (
                   <p>
-                    Poprawna odpowiedz: <strong>{currentQuestion.choices[currentQuestion.correctIndex]}</strong>
+                    Poprawna odpowiedź:{' '}
+                    <strong>{currentQuestion.choices[currentQuestion.correctIndex]}</strong>
                   </p>
                 )}
-                <p>{currentQuestion.explanation}</p>
+                <p>
+                  <strong>Zapamiętaj to tak:</strong> {currentQuestion.explanation}
+                </p>
               </div>
             )}
 
@@ -494,7 +518,7 @@ export function MajaQuiz() {
               </button>
 
               <button className="maja-btn maja-btn-primary" onClick={nextQuestion} disabled={selectedAnswer < 0}>
-                {currentIndex === questions.length - 1 ? 'Zakoncz quiz' : 'Dalej'}
+                {currentIndex === questions.length - 1 ? 'Zakończ quiz' : 'Dalej'}
               </button>
             </div>
           </section>
@@ -518,12 +542,12 @@ export function MajaQuiz() {
                       {index + 1}. {question.prompt}
                     </h3>
                     <p>
-                      Twoja odpowiedz:{' '}
+                      Twoja odpowiedź:{' '}
                       <strong>
                         {userAnswer >= 0 ? question.choices[userAnswer] : 'brak odpowiedzi'}
                       </strong>
                     </p>
-                    {!correct && <p>Poprawna odpowiedz: {question.choices[question.correctIndex]}</p>}
+                    {!correct && <p>Poprawna odpowiedź: {question.choices[question.correctIndex]}</p>}
                     <p className="maja-explain">{question.explanation}</p>
                   </article>
                 )
