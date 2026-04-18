@@ -6,6 +6,7 @@ import { MuscleGroups } from './pages/MuscleGroups'
 import { NewSession } from './pages/NewSession'
 import { SessionDetail } from './pages/SessionDetail'
 import { Stats } from './pages/Stats'
+import { MajaQuiz } from './pages/MajaQuiz'
 import { Nav } from './components/Nav'
 
 export type Page =
@@ -21,6 +22,12 @@ const AUTH_KEY = 'gymlog_auth'
 const PASSWORD = 'mackow626'
 
 export default function App() {
+  const path = window.location.pathname.replace(/\/+$/, '') || '/'
+
+  if (path === '/maja') {
+    return <MajaQuiz />
+  }
+
   const [authed, setAuthed] = useState(() => sessionStorage.getItem(AUTH_KEY) === '1')
   const [page, setPage] = useState<Page>({ name: 'dashboard' })
 
