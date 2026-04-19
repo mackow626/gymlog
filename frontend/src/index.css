@@ -705,6 +705,36 @@ body.maja-body {
   background: rgba(255, 197, 102, 0.16);
 }
 
+.maja-input-wrap {
+  margin-top: 0.95rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.maja-input-label {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.88rem;
+  color: rgba(255, 240, 215, 0.95);
+}
+
+.maja-input {
+  width: 100%;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 224, 180, 0.35);
+  background: rgba(255, 252, 245, 0.08);
+  color: #fff5e6;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.98rem;
+  line-height: 1.4;
+  padding: 0.72rem 0.85rem;
+  outline: none;
+}
+
+.maja-input:focus {
+  border-color: #ffca74;
+  box-shadow: 0 0 0 3px rgba(255, 202, 116, 0.2);
+}
+
 .maja-badge {
   width: 24px;
   height: 24px;
@@ -729,6 +759,10 @@ body.maja-body {
   padding: 0.7rem 0.8rem;
   border: 1px solid rgba(255, 225, 179, 0.28);
   background: rgba(255, 250, 240, 0.08);
+}
+
+.maja-check-row {
+  margin-top: 0.7rem;
 }
 
 .maja-feedback.ok {

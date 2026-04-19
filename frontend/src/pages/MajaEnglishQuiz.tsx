@@ -3,10 +3,14 @@ import { useEffect, useMemo, useState } from 'react'
 interface QuizQuestion {
   id: string
   prompt: string
-  choices: string[]
-  correctIndex: number
+  type: 'choice' | 'text'
+  choices?: string[]
+  correctIndex?: number
+  acceptedAnswers?: string[]
   explanation: string
 }
+
+type UserAnswer = number | string | null
 
 const QUESTIONS_PER_GAME = 10
 const QUIZ_VERSION = 3
@@ -29,7 +33,7 @@ function createEnglishQuestionPool(): QuizQuestion[] {
   const questions: QuizQuestion[] = []
   let idCounter = 1
 
-  const addQuestion = (
+  const addChoiceQuestion = (
     prompt: string,
     choices: string[],
     correctAnswer: string,
@@ -39,8 +43,24 @@ function createEnglishQuestionPool(): QuizQuestion[] {
     questions.push({
       id: `en-${idCounter}`,
       prompt,
+      type: 'choice',
       choices: shuffledChoices,
       correctIndex: shuffledChoices.indexOf(correctAnswer),
+      explanation,
+    })
+    idCounter += 1
+  }
+
+  const addTextQuestion = (
+    prompt: string,
+    acceptedAnswers: string[],
+    explanation: string,
+  ) => {
+    questions.push({
+      id: `en-${idCounter}`,
+      prompt,
+      type: 'text',
+      acceptedAnswers,
       explanation,
     })
     idCounter += 1
@@ -92,7 +112,7 @@ function createEnglishQuestionPool(): QuizQuestion[] {
       3,
     )
 
-    addQuestion(
+    addChoiceQuestion(
       `Co znaczy po polsku: "${entry.en}"?`,
       [entry.pl, ...plDistractors],
       entry.pl,
@@ -104,11 +124,17 @@ function createEnglishQuestionPool(): QuizQuestion[] {
       3,
     )
 
-    addQuestion(
+    addChoiceQuestion(
       `Jak jest po angielsku: "${entry.pl}"?`,
       [entry.en, ...enDistractors],
       entry.en,
       `Zapamiętaj: "${entry.pl}" po angielsku to "${entry.en}".`,
+    )
+
+    addTextQuestion(
+      `Wpisz po angielsku: "${entry.pl}"`,
+      [entry.en],
+      `Poprawna pisownia: "${entry.en}".`,
     )
   })
 
@@ -164,7 +190,7 @@ function createEnglishQuestionPool(): QuizQuestion[] {
   ]
 
   sentenceTasks.forEach((task) => {
-    addQuestion(
+    addChoiceQuestion(
       task.prompt,
       task.choices,
       task.answer,
@@ -173,6 +199,65 @@ function createEnglishQuestionPool(): QuizQuestion[] {
   })
 
   return questions
+}
+
+function normalizeText(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+function makeEmptyAnswers(count: number): UserAnswer[] {
+  return Array(count).fill(null)
+}
+
+function makeEmptyChecks(count: number): boolean[] {
+  return Array(count).fill(false)
+}
+
+function isAnswered(question: QuizQuestion, answer: UserAnswer): boolean {
+  if (question.type === 'choice') return typeof answer === 'number' && answer >= 0
+  if (question.type === 'text') return typeof answer === 'string' && answer.trim().length > 0
+  return false
+}
+
+function isCorrect(question: QuizQuestion, answer: UserAnswer): boolean {
+  if (!isAnswered(question, answer)) return false
+
+  if (question.type === 'choice') {
+    return typeof answer === 'number' && answer === question.correctIndex
+  }
+
+  if (question.type === 'text' && typeof answer === 'string') {
+    const normalized = normalizeText(answer)
+    return (question.acceptedAnswers || []).some((item) => normalizeText(item) === normalized)
+  }
+
+  return false
+}
+
+function getCorrectLabel(question: QuizQuestion): string {
+  if (question.type === 'choice' && question.choices && typeof question.correctIndex === 'number') {
+    return question.choices[question.correctIndex]
+  }
+
+  if (question.type === 'text' && question.acceptedAnswers?.length) {
+    return question.acceptedAnswers[0]
+  }
+
+  return 'brak danych'
+}
+
+function getUserAnswerLabel(question: QuizQuestion, answer: UserAnswer): string {
+  if (!isAnswered(question, answer)) return 'brak odpowiedzi'
+
+  if (question.type === 'choice' && typeof answer === 'number' && question.choices) {
+    return question.choices[answer]
+  }
+
+  if (question.type === 'text' && typeof answer === 'string') {
+    return answer
+  }
+
+  return 'brak odpowiedzi'
 }
 
 export function MajaEnglishQuiz() {
@@ -187,12 +272,14 @@ export function MajaEnglishQuiz() {
   )
 
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [answers, setAnswers] = useState<number[]>(Array(QUESTIONS_PER_GAME).fill(-1))
+  const [answers, setAnswers] = useState<UserAnswer[]>(makeEmptyAnswers(QUESTIONS_PER_GAME))
+  const [checked, setChecked] = useState<boolean[]>(makeEmptyChecks(QUESTIONS_PER_GAME))
   const [finished, setFinished] = useState(false)
 
   useEffect(() => {
     setCurrentIndex(0)
-    setAnswers(Array(QUESTIONS_PER_GAME).fill(-1))
+    setAnswers(makeEmptyAnswers(QUESTIONS_PER_GAME))
+    setChecked(makeEmptyChecks(QUESTIONS_PER_GAME))
     setFinished(false)
   }, [gameVersion])
 
@@ -222,13 +309,18 @@ export function MajaEnglishQuiz() {
   }, [])
 
   const currentQuestion = questions[currentIndex]
-  const selectedAnswer = answers[currentIndex]
-  const hasAnsweredCurrent = selectedAnswer >= 0
-  const isCurrentCorrect = hasAnsweredCurrent && selectedAnswer === currentQuestion.correctIndex
+  const currentAnswer = answers[currentIndex]
+  const currentChecked = checked[currentIndex]
+  const hasAnsweredCurrent = isAnswered(currentQuestion, currentAnswer)
+  const isCurrentCorrect = currentChecked && isCorrect(currentQuestion, currentAnswer)
+  const canProceedCurrent =
+    currentQuestion.type === 'text'
+      ? hasAnsweredCurrent && currentChecked
+      : hasAnsweredCurrent
 
   const score = useMemo(() => {
     return questions.reduce((acc, question, index) => {
-      if (answers[index] === question.correctIndex) return acc + 1
+      if (isCorrect(question, answers[index])) return acc + 1
       return acc
     }, 0)
   }, [answers, questions])
@@ -248,7 +340,7 @@ export function MajaEnglishQuiz() {
     localStorage.setItem(BEST_SCORE_KEY, String(score))
   }, [finished, score, bestScore])
 
-  const handleAnswer = (choiceIndex: number) => {
+  const handleChoiceAnswer = (choiceIndex: number) => {
     if (finished) return
 
     setAnswers((prev) => {
@@ -256,10 +348,44 @@ export function MajaEnglishQuiz() {
       next[currentIndex] = choiceIndex
       return next
     })
+
+    setChecked((prev) => {
+      const next = [...prev]
+      next[currentIndex] = true
+      return next
+    })
+  }
+
+  const handleTextAnswer = (value: string) => {
+    if (finished) return
+
+    setAnswers((prev) => {
+      const next = [...prev]
+      next[currentIndex] = value
+      return next
+    })
+
+    setChecked((prev) => {
+      const next = [...prev]
+      next[currentIndex] = false
+      return next
+    })
+  }
+
+  const checkCurrentTextAnswer = () => {
+    if (finished) return
+    if (currentQuestion.type !== 'text') return
+    if (!hasAnsweredCurrent) return
+
+    setChecked((prev) => {
+      const next = [...prev]
+      next[currentIndex] = true
+      return next
+    })
   }
 
   const nextQuestion = () => {
-    if (selectedAnswer < 0) return
+    if (!canProceedCurrent) return
 
     if (currentIndex === questions.length - 1) {
       setFinished(true)
@@ -343,24 +469,56 @@ export function MajaEnglishQuiz() {
 
             <h2 className="maja-question">{currentQuestion.prompt}</h2>
 
-            <div className="maja-answers">
-              {currentQuestion.choices.map((choice, index) => {
-                const isSelected = selectedAnswer === index
+            {currentQuestion.type === 'choice' && currentQuestion.choices && (
+              <div className="maja-answers">
+                {currentQuestion.choices.map((choice, index) => {
+                  const isSelected = currentAnswer === index
 
-                return (
-                  <button
-                    key={`${currentQuestion.id}-${choice}`}
-                    className={`maja-answer ${isSelected ? 'is-selected' : ''}`}
-                    onClick={() => handleAnswer(index)}
-                  >
-                    <span className="maja-badge">{String.fromCharCode(65 + index)}</span>
-                    <span>{choice}</span>
-                  </button>
-                )
-              })}
-            </div>
+                  return (
+                    <button
+                      key={`${currentQuestion.id}-${choice}`}
+                      className={`maja-answer ${isSelected ? 'is-selected' : ''}`}
+                      onClick={() => handleChoiceAnswer(index)}
+                    >
+                      <span className="maja-badge">{String.fromCharCode(65 + index)}</span>
+                      <span>{choice}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
-            {learningMode && hasAnsweredCurrent && (
+            {currentQuestion.type === 'text' && (
+              <div className="maja-input-wrap">
+                <label className="maja-input-label" htmlFor={`answer-${currentQuestion.id}`}>
+                  Wpisz odpowiedź po angielsku
+                </label>
+                <input
+                  id={`answer-${currentQuestion.id}`}
+                  className="maja-input"
+                  type="text"
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="Np. swimming"
+                  value={typeof currentAnswer === 'string' ? currentAnswer : ''}
+                  onChange={(event) => handleTextAnswer(event.target.value)}
+                />
+              </div>
+            )}
+
+            {currentQuestion.type === 'text' && (
+              <div className="maja-check-row">
+                <button
+                  className="maja-btn maja-btn-ghost"
+                  onClick={checkCurrentTextAnswer}
+                  disabled={!hasAnsweredCurrent}
+                >
+                  Sprawdź odpowiedź
+                </button>
+              </div>
+            )}
+
+            {learningMode && hasAnsweredCurrent && currentChecked && (
               <div className={`maja-feedback ${isCurrentCorrect ? 'ok' : 'bad'}`}>
                 <p className="maja-feedback-title">
                   {isCurrentCorrect ? 'Dobra odpowiedź! Super.' : 'To jeszcze nie to.'}
@@ -368,7 +526,7 @@ export function MajaEnglishQuiz() {
                 {!isCurrentCorrect && (
                   <p>
                     Poprawna odpowiedź:{' '}
-                    <strong>{currentQuestion.choices[currentQuestion.correctIndex]}</strong>
+                    <strong>{getCorrectLabel(currentQuestion)}</strong>
                   </p>
                 )}
                 <p>
@@ -389,7 +547,7 @@ export function MajaEnglishQuiz() {
               <button
                 className="maja-btn maja-btn-primary"
                 onClick={nextQuestion}
-                disabled={selectedAnswer < 0}
+                disabled={!canProceedCurrent}
               >
                 {currentIndex === questions.length - 1 ? 'Zakończ quiz' : 'Dalej'}
               </button>
@@ -407,7 +565,7 @@ export function MajaEnglishQuiz() {
             <div className="maja-result-grid">
               {questions.map((question, index) => {
                 const userAnswer = answers[index]
-                const correct = userAnswer === question.correctIndex
+                const correct = isCorrect(question, userAnswer)
 
                 return (
                   <article key={question.id} className={`maja-result-item ${correct ? 'ok' : 'bad'}`}>
@@ -416,11 +574,9 @@ export function MajaEnglishQuiz() {
                     </h3>
                     <p>
                       Twoja odpowiedź:{' '}
-                      <strong>
-                        {userAnswer >= 0 ? question.choices[userAnswer] : 'brak odpowiedzi'}
-                      </strong>
+                      <strong>{getUserAnswerLabel(question, userAnswer)}</strong>
                     </p>
-                    {!correct && <p>Poprawna odpowiedź: {question.choices[question.correctIndex]}</p>}
+                    {!correct && <p>Poprawna odpowiedź: {getCorrectLabel(question)}</p>}
                     <p className="maja-explain">{question.explanation}</p>
                   </article>
                 )
