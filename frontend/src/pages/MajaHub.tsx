@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 
-const QUIZ_VERSION = 2
+const QUIZ_VERSION = 3
 
 export function MajaHub() {
   useEffect(() => {
@@ -47,19 +47,25 @@ export function MajaHub() {
         </header>
 
         <section className="maja-hub-grid">
-          <a className="maja-hub-card" href="/maja/historia">
+          <article className="maja-hub-card">
             <p className="maja-hub-kicker">Historia</p>
             <h2>Stulecie wojen i Kościuszko</h2>
-            <p>10 losowych pytań z dużej puli, z trybem nauki i podpowiedziami.</p>
-            <span>Otwórz: /maja/historia</span>
-          </a>
+            <p>Najpierw streszczenie całej lekcji, potem quiz z losowymi pytaniami.</p>
+            <div className="maja-hub-links">
+              <a className="maja-switch-link" href="/maja/historia/streszczenie">Streszczenie</a>
+              <a className="maja-switch-link" href="/maja/historia">Quiz</a>
+            </div>
+          </article>
 
-          <a className="maja-hub-card" href="/maja/angielski">
+          <article className="maja-hub-card">
             <p className="maja-hub-kicker">Angielski</p>
             <h2>Słówka i zdania o sporcie</h2>
-            <p>Tłumaczenia EN-PL, PL-EN oraz uzupełnianie zdań z lekcji.</p>
-            <span>Otwórz: /maja/angielski</span>
-          </a>
+            <p>Najpierw streszczenie słówek i wzorów zdań, potem quiz utrwalający.</p>
+            <div className="maja-hub-links">
+              <a className="maja-switch-link" href="/maja/angielski/streszczenie">Streszczenie</a>
+              <a className="maja-switch-link" href="/maja/angielski">Quiz</a>
+            </div>
+          </article>
         </section>
       </main>
     </div>

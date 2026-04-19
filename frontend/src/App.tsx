@@ -8,6 +8,8 @@ import { SessionDetail } from './pages/SessionDetail'
 import { Stats } from './pages/Stats'
 import { MajaQuiz } from './pages/MajaQuiz'
 import { MajaEnglishQuiz } from './pages/MajaEnglishQuiz'
+import { MajaHistorySummary } from './pages/MajaHistorySummary'
+import { MajaEnglishSummary } from './pages/MajaEnglishSummary'
 import { MajaHub } from './pages/MajaHub'
 import { Nav } from './components/Nav'
 
@@ -34,8 +36,16 @@ export default function App() {
     return <MajaQuiz />
   }
 
+  if (path === '/maja/historia/streszczenie') {
+    return <MajaHistorySummary />
+  }
+
   if (path === '/maja/angielski') {
     return <MajaEnglishQuiz />
+  }
+
+  if (path === '/maja/angielski/streszczenie') {
+    return <MajaEnglishSummary />
   }
 
   const [authed, setAuthed] = useState(() => sessionStorage.getItem(AUTH_KEY) === '1')

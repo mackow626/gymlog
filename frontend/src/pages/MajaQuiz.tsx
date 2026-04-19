@@ -9,7 +9,7 @@ interface QuizQuestion {
 }
 
 const QUESTIONS_PER_GAME = 10
-const QUIZ_VERSION = 2
+const QUIZ_VERSION = 3
 const BEST_SCORE_KEY = 'maja_quiz_best_score'
 
 function shuffle<T>(items: T[]): T[] {
@@ -449,10 +449,16 @@ export function MajaQuiz() {
           </p>
           <div className="maja-switch">
             <a className="maja-switch-link is-active" href="/maja/historia">
-              Historia
+              Quiz historia
+            </a>
+            <a className="maja-switch-link" href="/maja/historia/streszczenie">
+              Streszczenie historia
             </a>
             <a className="maja-switch-link" href="/maja/angielski">
-              Angielski
+              Quiz angielski
+            </a>
+            <a className="maja-switch-link" href="/maja/angielski/streszczenie">
+              Streszczenie angielski
             </a>
           </div>
           <p className="maja-meta">
