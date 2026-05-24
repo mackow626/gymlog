@@ -932,6 +932,163 @@ body.maja-body {
   }
 }
 
+/* ── Maja Verbs Quiz ────────────────────────────────────────── */
+
+.maja-verb-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+
+.maja-verb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  overflow: visible;
+}
+
+.maja-verb-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 231, 196, 0.6);
+}
+
+.maja-verb-given {
+  padding: 0.6rem 0.85rem 1rem;
+  border-radius: 10px;
+  background: rgba(168, 130, 255, 0.18);
+  border: 2px solid rgba(168, 130, 255, 0.55);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+  overflow: visible;
+  display: block;
+}
+
+.maja-verb-input {
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.15s;
+  outline: none;
+}
+
+.maja-verb-input:focus {
+  border-color: rgba(168, 130, 255, 0.7);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.maja-verb-input.is-correct {
+  border-color: #4ade80;
+  background: rgba(74, 222, 128, 0.08);
+  color: #4ade80;
+}
+
+.maja-verb-input.is-wrong {
+  border-color: #f87171;
+  background: rgba(248, 113, 113, 0.08);
+  color: #f87171;
+}
+
+.maja-verb-input:disabled {
+  opacity: 0.85;
+  cursor: default;
+}
+
+.maja-verb-correction {
+  font-size: 0.82rem;
+  color: #4ade80;
+  margin: 0;
+}
+
+/* Progress dots */
+.maja-dots-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 1.25rem;
+  justify-content: center;
+}
+
+.maja-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.maja-dot.active {
+  background: rgba(168, 130, 255, 0.9);
+  box-shadow: 0 0 6px rgba(168, 130, 255, 0.6);
+}
+
+.maja-dot.done-ok {
+  background: #4ade80;
+}
+
+.maja-dot.done-bad {
+  background: #f87171;
+}
+
+/* Verb reference table */
+.maja-verbs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.maja-verbs-table th {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  background: rgba(168, 130, 255, 0.15);
+  color: rgba(255, 231, 196, 0.8);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.maja-verbs-table td {
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.maja-verbs-table tr:last-child td {
+  border-bottom: none;
+}
+
+.maja-verbs-table tr:hover td {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.maja-header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 480px) {
+  .maja-verb-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────── */
+
 .field-error {
   margin-top: 0.45rem;
   color: var(--danger);

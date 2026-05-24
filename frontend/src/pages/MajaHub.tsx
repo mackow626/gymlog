@@ -66,6 +66,15 @@ export function MajaHub() {
               <a className="maja-switch-link" href="/maja/angielski">Quiz</a>
             </div>
           </article>
+
+          <article className="maja-hub-card">
+            <p className="maja-hub-kicker">Angielski</p>
+            <h2>Czasowniki nieregularne</h2>
+            <p>Ćwicz wszystkie 36 czasowników: bezokolicznik, Past Simple, Past Participle i znaczenie po polsku.</p>
+            <div className="maja-hub-links">
+              <a className="maja-switch-link" href="/maja/angielski/czasowniki">Zacznij quiz</a>
+            </div>
+          </article>
         </section>
       </main>
     </div>

@@ -11,6 +11,7 @@ import { MajaEnglishQuiz } from './pages/MajaEnglishQuiz'
 import { MajaHistorySummary } from './pages/MajaHistorySummary'
 import { MajaEnglishSummary } from './pages/MajaEnglishSummary'
 import { MajaHub } from './pages/MajaHub'
+import { MajaVerbsQuiz } from './pages/MajaVerbsQuiz'
 import { Nav } from './components/Nav'
 
 export type Page =
@@ -46,6 +47,10 @@ export default function App() {
 
   if (path === '/maja/angielski/streszczenie') {
     return <MajaEnglishSummary />
+  }
+
+  if (path === '/maja/angielski/czasowniki') {
+    return <MajaVerbsQuiz />
   }
 
   const [authed, setAuthed] = useState(() => sessionStorage.getItem(AUTH_KEY) === '1')
