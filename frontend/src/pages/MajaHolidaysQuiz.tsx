@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 const QUIZ_VERSION = 1
 const BEST_SCORE_KEY = 'maja_holidays_best_score'
@@ -6,33 +6,41 @@ const BEST_SCORE_KEY = 'maja_holidays_best_score'
 interface Word {
   en: string
   pl: string
+  altEn?: string[]   // extra accepted spellings when typing the English
+  altPl?: string[]   // extra accepted spellings when typing the Polish
 }
 
 const WORDS: Word[] = [
   { en: 'apartment',              pl: 'apartament' },
-  { en: 'cottage',                pl: 'chatka' },
-  { en: 'youth hostel',           pl: 'schronisko młodzieżowe' },
+  { en: 'cottage',                pl: 'chatka',                   altPl: ['chata', 'domek'] },
+  { en: 'youth hostel',           pl: 'schronisko młodzieżowe',   altPl: ['hotel dla młodzieży'] },
   { en: 'tent',                   pl: 'namiot' },
-  { en: 'caravan',                pl: 'przyczepa kempingowa' },
-  { en: 'B&B (bed and breakfast)', pl: 'pensjonat ze śniadaniem' },
-  { en: 'chalet',                 pl: 'domek w górach' },
+  { en: 'caravan',                pl: 'przyczepa kempingowa',     altPl: ['wóz kempingowy', 'przyczepa'] },
+  {
+    en: 'B&B (bed and breakfast)',
+    pl: 'pensjonat ze śniadaniem',
+    altEn: ['b&b', 'bb', 'bed and breakfast'],
+    altPl: ['pensjonat', 'pensjonat oferujący zakwaterowanie ze śniadaniem'],
+  },
+  { en: 'chalet',                 pl: 'domek w górach',           altPl: ['domek'] },
   { en: 'accommodation',          pl: 'zakwaterowanie' },
-  { en: 'skiing holiday',         pl: 'wyjazd na narty' },
+  { en: 'skiing holiday',         pl: 'wyjazd na narty',          altEn: ['skiing holidays'] },
   { en: 'destination',            pl: 'cel podróży' },
-  { en: 'length of holiday trip', pl: 'długość wycieczki' },
-  { en: 'outdoor activity',       pl: 'aktywność na dworze' },
-  { en: 'stay in',                pl: 'pozostawać w domu' },
+  { en: 'length of holiday trip', pl: 'długość wycieczki',        altEn: ['length of the holiday trip'] },
+  { en: 'outdoor activity',       pl: 'aktywność na dworze',      altPl: ['aktywność na świeżym powietrzu', 'aktywność na zewnątrz'] },
+  { en: 'stay in',                pl: 'pozostawać w domu',        altPl: ['zostawać w domu', 'siedzieć w domu'] },
   { en: 'summer camp',            pl: 'obóz letni' },
   { en: 'school trip',            pl: 'wycieczka szkolna' },
-  { en: 'go canoeing',            pl: 'pływać kajakiem' },
+  { en: 'go canoeing',            pl: 'pływać kajakiem',          altEn: ['canoeing'], altPl: ['iść na kajaki', 'jeździć na kajaki'] },
   { en: 'identify plants',        pl: 'rozpoznawać rośliny' },
-  { en: 'pick fruit',             pl: 'zbierać owoce' },
+  { en: 'pick fruit',             pl: 'zbierać owoce',            altEn: ['pick fruits'] },
   { en: 'collect wood',           pl: 'zbierać drewno' },
-  { en: 'light a fire',           pl: 'rozpalić ogień' },
-  { en: 'use a compass',          pl: 'używać kompasu' },
+  { en: 'light a fire',           pl: 'rozpalić ogień',           altEn: ['light fire'], altPl: ['rozpalać ogień'] },
+  { en: 'use a compass',          pl: 'używać kompasu',           altEn: ['use compass'] },
 ]
 
 type Direction = 'pl-en' | 'en-pl' | 'mixed'
+type AnswerMode = 'choice' | 'typing'
 
 interface Task {
   word: Word
@@ -48,6 +56,39 @@ function shuffle<T>(items: T[]): T[] {
     ;[copy[i], copy[j]] = [copy[j], copy[i]]
   }
   return copy
+}
+
+/** Lenient compare: ignores case, Polish diacritics, punctuation,
+ *  leading articles and any parenthesised part. */
+function normalizeAnswer(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\(.*?\)/g, ' ')          // drop "(bed and breakfast)"
+    .replace(/[ąàâ]/g, 'a')
+    .replace(/[ćç]/g, 'c')
+    .replace(/[ęèé]/g, 'e')
+    .replace(/ł/g, 'l')
+    .replace(/ń/g, 'n')
+    .replace(/[óô]/g, 'o')
+    .replace(/ś/g, 's')
+    .replace(/[źż]/g, 'z')
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9\s]/g, ' ')      // punctuation → space
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^(a|an|the)\s+/, '')     // ignore leading article
+}
+
+function acceptedFor(word: Word, askPl: boolean): string[] {
+  return askPl
+    ? [word.en, ...(word.altEn || [])]
+    : [word.pl, ...(word.altPl || [])]
+}
+
+function isTypedCorrect(typed: string, word: Word, askPl: boolean): boolean {
+  const n = normalizeAnswer(typed)
+  if (!n) return false
+  return acceptedFor(word, askPl).some((a) => normalizeAnswer(a) === n)
 }
 
 function buildTasks(direction: Direction): Task[] {
@@ -74,22 +115,39 @@ export function MajaHolidaysQuiz() {
   const [tasks, setTasks] = useState<Task[]>(() => buildTasks('mixed'))
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selected, setSelected] = useState<number | null>(null)
+  const [typed, setTyped] = useState('')
+  const [typedChecked, setTypedChecked] = useState(false)
   const [results, setResults] = useState<boolean[]>([])
   const [finished, setFinished] = useState(false)
   const [showTable, setShowTable] = useState(false)
   const [bestScore, setBestScore] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const task = tasks[currentIndex]
-  const checked = selected !== null
-  const isCorrect = checked && selected === task.correctIndex
+  // English answers are typed; Polish answers are picked from options.
+  const isTyping = task.askPl
+  const checked = isTyping ? typedChecked : selected !== null
+  const isCorrect = isTyping
+    ? typedChecked && isTypedCorrect(typed, task.word, task.askPl)
+    : selected === task.correctIndex
 
   useEffect(() => {
     setTasks(buildTasks(direction))
     setCurrentIndex(0)
     setSelected(null)
+    setTyped('')
+    setTypedChecked(false)
     setResults([])
     setFinished(false)
   }, [direction, gameVersion])
+
+  // focus the input whenever a typing question comes up
+  useEffect(() => {
+    if (isTyping && !typedChecked) {
+      const t = setTimeout(() => inputRef.current?.focus(), 50)
+      return () => clearTimeout(t)
+    }
+  }, [currentIndex, isTyping, typedChecked])
 
   useEffect(() => {
     const prev = document.title
@@ -129,6 +187,12 @@ export function MajaHolidaysQuiz() {
     setResults((prev) => [...prev, index === task.correctIndex])
   }
 
+  const handleCheckTyped = () => {
+    if (typedChecked || !typed.trim()) return
+    setTypedChecked(true)
+    setResults((prev) => [...prev, isTypedCorrect(typed, task.word, task.askPl)])
+  }
+
   const handleNext = () => {
     if (currentIndex === tasks.length - 1) {
       setFinished(true)
@@ -136,6 +200,8 @@ export function MajaHolidaysQuiz() {
     }
     setCurrentIndex((prev) => prev + 1)
     setSelected(null)
+    setTyped('')
+    setTypedChecked(false)
   }
 
   const percentage = Math.round((score / tasks.length) * 100)
@@ -151,8 +217,8 @@ export function MajaHolidaysQuiz() {
           <p className="maja-kicker">Angielski · Holidays</p>
           <h1 className="maja-title">Słówka — wakacje</h1>
           <p className="maja-sub">
-            Wszystkie {WORDS.length} słówek z listy. Wybierz kierunek tłumaczenia i przejdź
-            przez każde słówko.
+            Wszystkie {WORDS.length} słówek z listy. Angielskie słówka wpisujesz z klawiatury,
+            polskie wybierasz z opcji. Ogonki i „a/the" nie są wymagane.
           </p>
           <div className="maja-switch">
             <a className="maja-switch-link" href="/maja">Hub</a>
@@ -219,34 +285,67 @@ export function MajaHolidaysQuiz() {
             </div>
 
             <p className="mhol-direction-tag">
-              {task.askPl ? 'Polski → Angielski' : 'Angielski → Polski'}
+              {isTyping ? 'Wpisz po angielsku' : 'Wybierz polskie znaczenie'}
             </p>
 
             <h2 className="mhol-prompt">
               {task.askPl ? task.word.pl : task.word.en}
             </h2>
 
-            <div className="maja-answers">
-              {task.choices.map((choice, index) => {
-                let cls = 'maja-answer'
-                if (checked) {
-                  if (index === task.correctIndex) cls += ' is-correct'
-                  else if (index === selected) cls += ' is-wrong'
-                } else if (index === selected) cls += ' is-selected'
-
-                return (
+            {isTyping ? (
+              <div className="mhol-typing">
+                <input
+                  ref={inputRef}
+                  className={`maja-verb-input${
+                    typedChecked ? (isCorrect ? ' is-correct' : ' is-wrong') : ''
+                  }`}
+                  type="text"
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  placeholder="np. summer camp"
+                  value={typed}
+                  disabled={typedChecked}
+                  onChange={(e) => setTyped(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter') return
+                    if (!typedChecked) handleCheckTyped()
+                    else handleNext()
+                  }}
+                />
+                {!typedChecked && (
                   <button
-                    key={choice}
-                    className={cls}
-                    onClick={() => handleSelect(index)}
-                    disabled={checked}
+                    className="maja-btn maja-btn-ghost"
+                    onClick={handleCheckTyped}
+                    disabled={!typed.trim()}
                   >
-                    <span className="maja-badge">{String.fromCharCode(65 + index)}</span>
-                    <span>{choice}</span>
+                    Sprawdź
                   </button>
-                )
-              })}
-            </div>
+                )}
+              </div>
+            ) : (
+              <div className="maja-answers">
+                {task.choices.map((choice, index) => {
+                  let cls = 'maja-answer'
+                  if (checked) {
+                    if (index === task.correctIndex) cls += ' is-correct'
+                    else if (index === selected) cls += ' is-wrong'
+                  } else if (index === selected) cls += ' is-selected'
+
+                  return (
+                    <button
+                      key={choice}
+                      className={cls}
+                      onClick={() => handleSelect(index)}
+                      disabled={checked}
+                    >
+                      <span className="maja-badge">{String.fromCharCode(65 + index)}</span>
+                      <span>{choice}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
             {checked && (
               <div className={`maja-feedback ${isCorrect ? 'ok' : 'bad'}`}>

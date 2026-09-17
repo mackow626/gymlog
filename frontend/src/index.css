@@ -1120,6 +1120,19 @@ body.maja-body {
   font-weight: 700;
 }
 
+.mhol-typing {
+  display: flex;
+  gap: 0.6rem;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.mhol-typing .maja-verb-input {
+  flex: 1 1 14rem;
+  min-width: 0;
+  font-size: 1.05rem;
+}
+
 .mhol-direction-tag {
   margin-top: 1rem;
   font-size: 0.7rem;
