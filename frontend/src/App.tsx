@@ -12,6 +12,8 @@ import { MajaHistorySummary } from './pages/MajaHistorySummary'
 import { MajaEnglishSummary } from './pages/MajaEnglishSummary'
 import { MajaHub } from './pages/MajaHub'
 import { MajaVerbsQuiz } from './pages/MajaVerbsQuiz'
+import { MajaHolidaysQuiz } from './pages/MajaHolidaysQuiz'
+import { MajaGeographyScales } from './pages/MajaGeographyScales'
 import { Nav } from './components/Nav'
 
 export type Page =
@@ -51,6 +53,14 @@ export default function App() {
 
   if (path === '/maja/angielski/czasowniki') {
     return <MajaVerbsQuiz />
+  }
+
+  if (path === '/maja/angielski/holidays') {
+    return <MajaHolidaysQuiz />
+  }
+
+  if (path === '/maja/geografia/skala') {
+    return <MajaGeographyScales />
   }
 
   const [authed, setAuthed] = useState(() => sessionStorage.getItem(AUTH_KEY) === '1')

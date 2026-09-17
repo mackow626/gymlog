@@ -75,6 +75,24 @@ export function MajaHub() {
               <a className="maja-switch-link" href="/maja/angielski/czasowniki">Zacznij quiz</a>
             </div>
           </article>
+
+          <article className="maja-hub-card">
+            <p className="maja-hub-kicker">Angielski</p>
+            <h2>Holidays — słówka</h2>
+            <p>21 słówek o wakacjach i wyjazdach. Wybierz kierunek: polski → angielski, odwrotnie albo mieszane.</p>
+            <div className="maja-hub-links">
+              <a className="maja-switch-link" href="/maja/angielski/holidays">Zacznij quiz</a>
+            </div>
+          </article>
+
+          <article className="maja-hub-card">
+            <p className="maja-hub-kicker">Geografia</p>
+            <h2>Skala na mapie</h2>
+            <p>Karta pracy z 10 zadaniami: rodzaje skali, zamiana skal, obliczanie odległości. Razem 48 pkt.</p>
+            <div className="maja-hub-links">
+              <a className="maja-switch-link" href="/maja/geografia/skala">Otwórz kartę pracy</a>
+            </div>
+          </article>
         </section>
       </main>
     </div>
